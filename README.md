@@ -43,13 +43,20 @@ Un disque d'ombre passe devant la lumière : il ne reste qu'un croissant.
 | `theme/eclipse.sh apply` | palette Éclipse : thème shell + GTK « Shadow », tuiles, dock |
 | `theme/eclipse.sh revert` | revient au thème d'avant (TokyoCombo / Tokyonight) |
 | `theme/eclipse.sh build` | régénère les thèmes après une mise à jour de GNOME |
+| `theme/icones.sh apply` / `revert` | thème d'icônes Shadow (Papirus-Dark, dossiers violets) |
+| `sudo systeme/installer-systeme.sh` | GRUB Éclipse, animation de démarrage, écran de connexion, nom « Shadow » |
+| `sudo systeme/desinstaller-systeme.sh` | annule la partie système (sauvegardes dans `/var/backups/shadow-os`) |
+
+Terminal : profil GNOME Terminal « Shadow · Éclipse » + `terminal/fastfetch.jsonc`
+(ancienne config : `~/.config/backup-theme/fastfetch-config-avant-shadow.jsonc`).
+Extension `extension/shadow-os@jordan` : accent Éclipse sur les tuiles des réglages rapides.
 
 Sauvegardes : `~/.local/state/shadow-os/`, `~/.config/backup-theme/fond-avant-eclipse.txt`.
 
 ## Limites connues
 
-- GNOME 50 impose l'accent système aux tuiles des réglages rapides : elles sont en
-  violet GNOME `#9141AC` au lieu de `#7C6CFF`. Correctif prévu : extension Shadow (phase 3).
+- GNOME 50 impose l'accent système aux tuiles des réglages rapides (aucun CSS n'y peut rien) :
+  corrigé par l'extension `shadow-os@jordan`, active après reconnexion.
 - En mode tuiles, une appli qui se rouvre maximisée (kitty, éditeur de texte) n'est
   pas rangée : Tiling Shell ne range que les fenêtres non maximisées.
 - `shadow theme apply` (ancien shadow-desktop) remettrait Tokyonight : utiliser `eclipse.sh`.
