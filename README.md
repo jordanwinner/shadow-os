@@ -12,7 +12,7 @@ depuis le 2026-10-23) y sera intégré.
 | Phase | Contenu | État |
 |---|---|---|
 | 1. Fondations | identité, thème, flottant + tuiles avec bascule, arsenal cyber, couche Windows | quasi fini |
-| 2. Distribution | installateur ✅, paquet `.deb` ✅, ISO (`live-build`), dépôt APT | en cours |
+| 2. Distribution | installateur ✅, paquet `.deb` ✅, dépôt APT ✅, ISO (`live-build`) | en cours |
 | 3. Composants maison | centre de contrôle, lanceur, mode pentest, installateur, boutique | — |
 | 4. Bureau maison | shell/compositeur Shadow | — |
 
@@ -61,6 +61,20 @@ shadow-os --revert              # revient au bureau d'avant
 - `shadow-os-desktop` : charge utile dans `/usr/share/shadow-os` + commande `shadow-os`.
 - `shadow-os` : méta-paquet qui tire le bureau et toutes les dépendances
   (GNOME Shell, gestionnaire d'extensions, polices, terminal ; distrobox/podman en recommandés).
+
+### Dépôt APT
+
+```bash
+depot/construire-depot.sh       # construit depot/sortie/ (pool + dists signés + clé publique)
+sudo depot/ajouter-depot.sh "file:$PWD/depot/sortie"   # ajoute le dépôt (local)
+sudo apt update && sudo apt install shadow-os
+```
+
+Le dépôt est signé par une clé GPG dédiée (trousseau local `depot/.gnupg`, jamais
+le trousseau personnel). Pour publier sur une URL (GitHub Pages, serveur) : copier
+`depot/sortie/` à la racine web, puis sur chaque machine :
+`sudo depot/ajouter-depot.sh "https://<domaine>/shadow"`. La clé publique est
+`depot/sortie/shadow-os-archive-keyring.gpg`.
 
 ## Commandes
 
