@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# shadow-os — active (ou réapplique) Shadow sur le compte courant.
+#   shadow-os                 applique thème, extensions, grille, scripts, terminal, apps
+#   shadow-os --avec-arsenal  + box Kali   | --avec-systeme + GRUB/Plymouth/login (sudo)
+#   shadow-os --revert        revient au bureau d'avant Shadow (thème + grille)
+#   shadow-os --help
+CHARGE=/usr/share/shadow-os
+[ -f "$CHARGE/installer.sh" ] || { echo "shadow-os-desktop mal installé ($CHARGE absent)" >&2; exit 1; }
+
+case "${1:-}" in
+  --revert)
+    bash "$CHARGE/theme/eclipse.sh" revert || true
+    python3 -I "$CHARGE/theme/applis.py" revert || true
+    bash "$CHARGE/theme/icones.sh" revert 2>/dev/null || true
+    echo "Shadow désactivé pour ce compte. Reconnecte-toi."
+    exit 0 ;;
+  -h|--help)
+    exec "$CHARGE/installer.sh" --help ;;
+esac
+
+# les dépendances sont fournies par le paquet → on saute le module prerequis
+if [ "$#" -eq 0 ]; then
+  exec "$CHARGE/installer.sh" --sans prerequis
+else
+  exec "$CHARGE/installer.sh" --sans prerequis "$@"
+fi

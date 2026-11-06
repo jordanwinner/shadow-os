@@ -12,7 +12,7 @@ depuis le 2026-10-23) y sera intégré.
 | Phase | Contenu | État |
 |---|---|---|
 | 1. Fondations | identité, thème, flottant + tuiles avec bascule, arsenal cyber, couche Windows | quasi fini |
-| 2. Distribution | script d'installation ✅, ISO (`live-build`), dépôt APT | en cours |
+| 2. Distribution | installateur ✅, paquet `.deb` ✅, ISO (`live-build`), dépôt APT | en cours |
 | 3. Composants maison | centre de contrôle, lanceur, mode pentest, installateur, boutique | — |
 | 4. Bureau maison | shell/compositeur Shadow | — |
 
@@ -48,6 +48,19 @@ Pour (ré)appliquer Shadow sur une machine Ubuntu/Debian + GNOME :
 L'installateur télécharge les extensions GNOME tierces depuis extensions.gnome.org
 selon la version du shell, lie l'extension Shadow, applique le thème et la grille,
 installe les scripts, le terminal et les apps. Idempotent : relançable sans risque.
+
+### Paquets Debian
+
+```bash
+paquet/construire.sh            # produit paquet/sortie/shadow-os*_1.0.0_all.deb
+sudo apt install ./paquet/sortie/shadow-os_1.0.0_all.deb   # méta : bureau + dépendances
+shadow-os                       # active Shadow sur le compte (puis reconnexion)
+shadow-os --revert              # revient au bureau d'avant
+```
+
+- `shadow-os-desktop` : charge utile dans `/usr/share/shadow-os` + commande `shadow-os`.
+- `shadow-os` : méta-paquet qui tire le bureau et toutes les dépendances
+  (GNOME Shell, gestionnaire d'extensions, polices, terminal ; distrobox/podman en recommandés).
 
 ## Commandes
 

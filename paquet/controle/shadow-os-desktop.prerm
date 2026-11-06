@@ -1,0 +1,6 @@
+#!/bin/sh
+# prerm de shadow-os-desktop : la désactivation par utilisateur se fait avec
+# « shadow-os --revert » (revert du thème/grille). On ne touche pas aux comptes
+# ici : un paquet ne modifie pas l'état des sessions utilisateur.
+set -e
+exit 0

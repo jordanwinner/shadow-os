@@ -1,0 +1,19 @@
+Package: shadow-os-desktop
+Version: @VERSION@
+Architecture: all
+Maintainer: Jordan Winner <jordanwinner@users.noreply.github.com>
+Section: x11
+Priority: optional
+Depends: gnome-shell (>= 42), python3, python3-gi, dconf-cli, curl
+Recommends: gnome-shell-extension-manager, gnome-tweaks, papirus-icon-theme, fonts-inter, gnome-terminal
+Suggests: shadow-os-systeme, distrobox, podman
+Installed-Size: @SIZE@
+Description: Bureau Shadow — identité Éclipse, thème, grille, outils
+ Environnement de bureau Shadow pour GNOME : palette « Éclipse », thème
+ shell et libadwaita, grille d'applications réorganisée en dossiers,
+ bascule fenêtres flottantes / tuiles, extension GNOME, terminal et
+ applications maison.
+ .
+ La charge utile est installée dans /usr/share/shadow-os. Après installation,
+ chaque utilisateur lance « shadow-os » une fois pour activer Shadow sur son
+ compte (thème, extensions, grille), puis se reconnecte.

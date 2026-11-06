@@ -1,0 +1,23 @@
+Package: shadow-os
+Version: @VERSION@
+Architecture: all
+Maintainer: Jordan Winner <jordanwinner@users.noreply.github.com>
+Section: metapackages
+Priority: optional
+Depends: shadow-os-desktop (= @VERSION@),
+ gnome-shell,
+ gnome-shell-extension-manager,
+ gnome-tweaks,
+ gnome-terminal,
+ papirus-icon-theme,
+ fonts-inter,
+ dconf-cli,
+ python3-gi
+Recommends: distrobox, podman, fastfetch
+Description: Shadow OS — méta-paquet (bureau complet + dépendances)
+ Installe l'environnement Shadow complet : le bureau Shadow
+ (shadow-os-desktop) et toutes ses dépendances d'exécution — GNOME Shell,
+ le gestionnaire d'extensions, le thème d'icônes, les polices et le terminal.
+ .
+ Recommande distrobox et podman pour l'arsenal Kali (« shadow arsenal »).
+ Après installation, lancez « shadow-os » pour activer Shadow sur votre compte.

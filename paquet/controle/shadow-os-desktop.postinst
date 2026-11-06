@@ -1,0 +1,28 @@
+#!/bin/sh
+# postinst de shadow-os-desktop
+set -e
+
+case "$1" in
+  configure)
+    # caches système (icônes, schémas, base d'applications), si les outils sont là
+    if command -v glib-compile-schemas >/dev/null 2>&1 && [ -d /usr/share/shadow-os/extension/shadow-os@jordan/schemas ]; then
+      glib-compile-schemas /usr/share/shadow-os/extension/shadow-os@jordan/schemas 2>/dev/null || true
+    fi
+    [ -x /usr/bin/update-desktop-database ] && update-desktop-database -q /usr/share/applications 2>/dev/null || true
+    if [ -x /usr/bin/gtk-update-icon-cache ] && [ -d /usr/share/icons/hicolor ]; then
+      gtk-update-icon-cache -qtf /usr/share/icons/hicolor 2>/dev/null || true
+    fi
+    # rendre exécutables les scripts de la charge utile
+    for f in /usr/share/shadow-os/installer.sh \
+             /usr/share/shadow-os/theme/eclipse.sh \
+             /usr/share/shadow-os/theme/icones.sh \
+             /usr/share/shadow-os/theme/applis.py \
+             /usr/share/shadow-os/scripts/shadow-mode.sh; do
+      [ -f "$f" ] && chmod 0755 "$f" 2>/dev/null || true
+    done
+    printf '\n\033[1;35m▸ Shadow installé.\033[0m Pour l'\''activer sur votre compte :\n'
+    printf '    \033[32mshadow-os\033[0m      puis déconnectez-vous / reconnectez-vous.\n\n'
+    ;;
+esac
+
+exit 0
