@@ -1,0 +1,6 @@
+[Unit]
+Description=HackQuest/Shadow - diaporama de fond d'écran (change l'image)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/share/shadow-desktop/wallpapers/wallpaper-next.sh all
