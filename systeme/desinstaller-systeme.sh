@@ -27,7 +27,8 @@ if [ -f "$SAUV/os-release.lien" ]; then
 fi
 for f in /usr/share/pixmaps/ubuntu-logo-text-dark.svg /usr/share/pixmaps/ubuntu-logo-text.svg; do
   if dpkg-divert --list "$f" | grep -q shadow; then
-    rm -f "$f"; dpkg-divert --package shadow-os --rename --remove "$f" >/dev/null
+    dpkg-divert --package shadow-os --no-rename --remove "$f" >/dev/null
+    mv -f "$f.ubuntu" "$f"
   fi
 done
 ok "logo Ubuntu rétabli dans À propos"

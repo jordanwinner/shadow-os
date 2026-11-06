@@ -100,7 +100,8 @@ ok "« Shadow (base $base_pretty) » — ID=ubuntu conservé (apt et les outils 
 for v in "ubuntu-logo-text-dark.svg:sombre" "ubuntu-logo-text.svg:clair"; do
   f="/usr/share/pixmaps/${v%%:*}"
   if ! dpkg-divert --list "$f" | grep -q shadow; then
-    dpkg-divert --package shadow-os --rename --divert "$f.ubuntu" --add "$f" >/dev/null
+    command cp -a "$f" "$f.ubuntu"
+    dpkg-divert --package shadow-os --no-rename --divert "$f.ubuntu" --add "$f" >/dev/null
   fi
   install -m644 "$ICI/a-propos/shadow-logo-texte-${v##*:}.svg" "$f"
 done
