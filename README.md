@@ -48,6 +48,13 @@ Un disque d'ombre passe devant la lumière : il ne reste qu'un croissant.
 | `sudo systeme/installer-systeme.sh` | GRUB Éclipse, animation de démarrage, écran de connexion, nom « Shadow » |
 | `sudo systeme/desinstaller-systeme.sh` | annule la partie système (sauvegardes dans `/var/backups/shadow-os`) |
 
+Applis :
+- `apps/vscode/` : thème VS Code « Shadow Éclipse » (`code --install-extension apps/vscode/shadow-eclipse-1.0.0.vsix`)
+- `apps/obsidian/shadow-eclipse.css` : extrait CSS à copier dans `<coffre>/.obsidian/snippets/`
+- `apps/bienvenue/bienvenue.py` : présentation au premier démarrage (Utilitaires › Bienvenue)
+- `ulauncher/shadow-eclipse/` : thème Ulauncher
+- Alt+Espace : recherche GNOME façon Spotlight (extension `shadow-os@jordan`)
+
 Terminal : profil GNOME Terminal « Shadow · Éclipse » + `terminal/fastfetch.jsonc`
 (ancienne config : `~/.config/backup-theme/fastfetch-config-avant-shadow.jsonc`).
 Extension `extension/shadow-os@jordan` : accent Éclipse sur les tuiles des réglages rapides.
