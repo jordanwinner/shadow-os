@@ -43,6 +43,7 @@ Un disque d'ombre passe devant la lumière : il ne reste qu'un croissant.
 | `theme/eclipse.sh apply` | palette Éclipse : thème shell + GTK « Shadow », tuiles, dock |
 | `theme/eclipse.sh revert` | revient au thème d'avant (TokyoCombo / Tokyonight) |
 | `theme/eclipse.sh build` | régénère les thèmes après une mise à jour de GNOME |
+| `theme/applis.py apply` / `revert` / `check` | grille en dossiers, noms courts, doublons masqués, dock court |
 | `theme/icones.sh apply` / `revert` | thème d'icônes Shadow (Papirus-Dark, dossiers violets) |
 | `sudo systeme/installer-systeme.sh` | GRUB Éclipse, animation de démarrage, écran de connexion, nom « Shadow » |
 | `sudo systeme/desinstaller-systeme.sh` | annule la partie système (sauvegardes dans `/var/backups/shadow-os`) |
