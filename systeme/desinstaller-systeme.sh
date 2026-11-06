@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Shadow — annule installer-systeme.sh à partir des sauvegardes de /var/backups/shadow-os.
 set -euo pipefail
+umask 022
 [ "$(id -u)" = 0 ] || { echo "À lancer avec sudo : sudo $0" >&2; exit 1; }
 SAUV=/var/backups/shadow-os
 ok(){ printf '  \033[32m✓\033[0m %s\n' "$*"; }
@@ -16,7 +17,7 @@ fi
 
 rm -f /etc/dconf/db/gdm.d/99-shadow /etc/dconf/db/gdm.d/90-shadow
 [ -f "$SAUV/profil-gdm-cree" ] && rm -f /etc/dconf/profile/gdm "$SAUV/profil-gdm-cree"
-dconf update && ok "écran de connexion d'origine"
+dconf update && chmod 644 /etc/dconf/db/gdm 2>/dev/null; ok "écran de connexion d'origine"
 
 if [ -f "$SAUV/os-release.lien" ]; then
   lien=$(cat "$SAUV/os-release.lien")

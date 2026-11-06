@@ -7,6 +7,9 @@
 # Tout est sauvegardé dans /var/backups/shadow-os ; annuler : desinstaller-systeme.sh
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "À lancer avec sudo : sudo $0" >&2; exit 1; }
+# sudo peut hériter d'un umask strict (027) : les fichiers système doivent rester
+# lisibles par gdm et les autres utilisateurs.
+umask 022
 
 ICI="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 RACINE="$(dirname "$ICI")"
@@ -60,6 +63,7 @@ if [ ! -f /etc/dconf/profile/gdm ]; then
   printf 'user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults\n' > /etc/dconf/profile/gdm
   touch "$SAUV/profil-gdm-cree"
 fi
+rm -f /etc/dconf/db/gdm.d/90-shadow   # ancien nom (lu avant gdm-settings)
 cat > /etc/dconf/db/gdm.d/99-shadow <<'EOF'
 # Shadow OS — écran de connexion
 [com/ubuntu/login-screen]
@@ -75,6 +79,7 @@ color-scheme='prefer-dark'
 accent-color='purple'
 EOF
 dconf update
+chmod 644 /etc/dconf/db/gdm.d/99-shadow /etc/dconf/db/gdm
 ok "fond Éclipse + logo Shadow (visible à la prochaine déconnexion)"
 
 # ── 4. Nom du système (Réglages › À propos) ────────────────────────────────
@@ -90,6 +95,12 @@ grep -vE '^(PRETTY_NAME|LOGO)=' /usr/lib/os-release > "$tmp"
 rm -f "$tmp"; chmod 644 /etc/os-release.shadow
 mv -f /etc/os-release.shadow /etc/os-release
 ok "« Shadow (base $base_pretty) » — ID=ubuntu conservé (apt et les outils Ubuntu ne voient pas de différence)"
+
+# ── 5. droits : tout ce que Shadow installe doit être lisible ──────────────
+chmod 755 /usr/share/backgrounds/shadow /usr/share/plymouth/themes/shadow /boot/grub/themes/shadow-eclipse
+chmod 644 /usr/share/backgrounds/shadow/eclipse.png /usr/share/pixmaps/shadow-os-connexion.png \
+  /usr/share/plymouth/themes/shadow/* /boot/grub/themes/shadow-eclipse/* /etc/default/grub.d/99-shadow.cfg /etc/os-release
+ok "droits vérifiés (lisibles par gdm)"
 
 echo
 printf '\033[1;35m✓ Shadow est installé au niveau système.\033[0m Redémarre pour voir GRUB et l’animation.\n'
