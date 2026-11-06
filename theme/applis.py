@@ -167,7 +167,8 @@ DOSSIERS = [
     ('Utilities', 'Utilitaires', [
         'org.gnome.Calculator.desktop', 'org.kde.kcalc.desktop', 'org.gnome.TextEditor.desktop',
         'org.gnome.Characters.desktop', 'org.gnome.clocks.desktop', 'org.gnome.font-viewer.desktop',
-        'org.gnome.FileRoller.desktop', 'org.kde.ark.desktop', 'scrcpy.desktop', 'org.gnome.Yelp.desktop']),
+        'org.gnome.FileRoller.desktop', 'org.kde.ark.desktop', 'scrcpy.desktop', 'org.gnome.Yelp.desktop',
+        'os.shadow.Bienvenue.desktop']),
 ]
 # hors dossiers, en tête de grille (façon Launchpad : les applis courantes, puis les dossiers).
 # GNOME n'affiche pas dans la grille les applis épinglées au dock.
