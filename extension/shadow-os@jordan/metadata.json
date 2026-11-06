@@ -1,0 +1,8 @@
+{
+  "uuid": "shadow-os@jordan",
+  "name": "Shadow OS",
+  "description": "Intégration du bureau Shadow : impose l'accent Éclipse aux tuiles des réglages rapides (GNOME 50 y force l'accent système).",
+  "shell-version": ["48", "49", "50"],
+  "version": 1,
+  "url": "https://github.com/jordanwinner/shadow-desktop"
+}
