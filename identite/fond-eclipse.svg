@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3200 1800" width="3200" height="1800">
+  <!-- Shadow — fond « Éclipse » (sombre) -->
+  <defs>
+    <radialGradient id="ciel" gradientUnits="userSpaceOnUse" cx="2000" cy="900" r="2300">
+      <stop offset="0" stop-color="#14132A"/>
+      <stop offset="0.45" stop-color="#0A0A14"/>
+      <stop offset="1" stop-color="#050508"/>
+    </radialGradient>
+    <linearGradient id="lumiere" gradientUnits="userSpaceOnUse" x1="1500" y1="1450" x2="2500" y2="350">
+      <stop offset="0" stop-color="#FF4D8D"/>
+      <stop offset="0.5" stop-color="#7C6CFF"/>
+      <stop offset="1" stop-color="#E2DCFF"/>
+    </linearGradient>
+    <radialGradient id="aura" gradientUnits="userSpaceOnUse" cx="1960" cy="960" r="1100">
+      <stop offset="0" stop-color="#7C6CFF" stop-opacity="0.30"/>
+      <stop offset="0.5" stop-color="#5B3FD9" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#5B3FD9" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="braise" gradientUnits="userSpaceOnUse" cx="1700" cy="1300" r="700">
+      <stop offset="0" stop-color="#FF4D8D" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#FF4D8D" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="eclat">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.9"/>
+      <stop offset="0.07" stop-color="#E2DCFF" stop-opacity="0.5"/>
+      <stop offset="0.3" stop-color="#B7A9FF" stop-opacity="0.16"/>
+      <stop offset="0.6" stop-color="#7C6CFF" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#7C6CFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rai"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="raiV" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <mask id="eclipse">
+      <rect width="3200" height="1800" fill="#fff"/>
+      <circle cx="2110" cy="820" r="500" fill="#000"/>
+    </mask>
+    <clipPath id="zoneLumiere"><circle cx="2040" cy="890" r="528"/></clipPath>
+    <filter id="flouLarge" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="70"/></filter>
+    <filter id="flouMoyen" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.045 0"/>
+    </filter>
+  </defs>
+
+  <rect width="3200" height="1800" fill="url(#ciel)"/>
+  <rect width="3200" height="1800" fill="url(#aura)"/>
+  <rect width="3200" height="1800" fill="url(#braise)"/>
+
+  <!-- croissant : halo large, halo moyen, puis lumière nette -->
+  <g filter="url(#flouLarge)" opacity="0.75"><circle cx="2040" cy="890" r="520" fill="url(#lumiere)" mask="url(#eclipse)"/></g>
+  <g filter="url(#flouMoyen)" opacity="0.8"><circle cx="2040" cy="890" r="520" fill="url(#lumiere)" mask="url(#eclipse)"/></g>
+  <circle cx="2040" cy="890" r="520" fill="url(#lumiere)" mask="url(#eclipse)"/>
+
+  <!-- disque d'ombre et couronne -->
+  <circle cx="2110" cy="820" r="500" fill="#07070C"/>
+  <circle cx="2110" cy="820" r="500" fill="none" stroke="url(#lumiere)" stroke-opacity="0.45" stroke-width="3" clip-path="url(#zoneLumiere)"/>
+
+  <!-- point « diamant » à la pointe du croissant -->
+  <circle cx="1796" cy="431" r="130" fill="url(#eclat)"/>
+  <g transform="translate(1796 431) rotate(-45)" opacity="0.55">
+    <rect x="-150" y="-1.2" width="300" height="2.4" rx="1.2" fill="url(#rai)"/>
+    <rect x="-1.2" y="-70" width="2.4" height="140" rx="1.2" fill="url(#raiV)"/>
+  </g>
+  <circle cx="1796" cy="431" r="5" fill="#fff"/>
+
+  <rect width="3200" height="1800" filter="url(#grain)"/>
+</svg>
