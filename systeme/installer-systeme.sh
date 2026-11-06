@@ -96,6 +96,16 @@ rm -f "$tmp"; chmod 644 /etc/os-release.shadow
 mv -f /etc/os-release.shadow /etc/os-release
 ok "« Shadow (base $base_pretty) » — ID=ubuntu conservé (apt et les outils Ubuntu ne voient pas de différence)"
 
+# ── 4b. logo de Réglages › À propos (Ubuntu le charge en dur depuis /usr/share/pixmaps) ──
+for v in "ubuntu-logo-text-dark.svg:sombre" "ubuntu-logo-text.svg:clair"; do
+  f="/usr/share/pixmaps/${v%%:*}"
+  if ! dpkg-divert --list "$f" | grep -q shadow; then
+    dpkg-divert --package shadow-os --rename --divert "$f.ubuntu" --add "$f" >/dev/null
+  fi
+  install -m644 "$ICI/a-propos/shadow-logo-texte-${v##*:}.svg" "$f"
+done
+ok "logo Shadow dans Réglages › À propos (originaux mis de côté par dpkg-divert)"
+
 # ── 5. droits : tout ce que Shadow installe doit être lisible ──────────────
 chmod 755 /usr/share/backgrounds/shadow /usr/share/plymouth/themes/shadow /boot/grub/themes/shadow-eclipse
 chmod 644 /usr/share/backgrounds/shadow/eclipse.png /usr/share/pixmaps/shadow-os-connexion.png \

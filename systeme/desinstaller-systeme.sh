@@ -25,4 +25,10 @@ if [ -f "$SAUV/os-release.lien" ]; then
   else command cp -a "$SAUV/os-release.fichier" /etc/os-release; fi
   ok "os-release d'origine"
 fi
+for f in /usr/share/pixmaps/ubuntu-logo-text-dark.svg /usr/share/pixmaps/ubuntu-logo-text.svg; do
+  if dpkg-divert --list "$f" | grep -q shadow; then
+    rm -f "$f"; dpkg-divert --package shadow-os --rename --remove "$f" >/dev/null
+  fi
+done
+ok "logo Ubuntu rétabli dans À propos"
 echo "Les fichiers Shadow (/boot/grub/themes/shadow-eclipse, /usr/share/plymouth/themes/shadow) restent en place, inactifs."
