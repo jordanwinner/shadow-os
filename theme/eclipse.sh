@@ -96,6 +96,42 @@ build(){
 #dashtodockContainer .show-apps .overview-icon { background-color: transparent; }
 #dashtodockContainer .show-apps:checked .overview-icon { background-color: rgba(124, 108, 255, 0.30); border-radius: 14px; }
 #dashtodockContainer .dash-separator { background-color: rgba(236, 235, 250, 0.14); width: 1px; margin: 6px 4px; }
+
+/* Alt+Tab, sélecteur d'espaces, bulles volume/luminosité : verre Éclipse */
+.switcher-list, .workspace-switcher, .osd-window, .resize-popup {
+  background-color: rgba(14, 14, 22, 0.90);
+  border: 1px solid rgba(183, 169, 255, 0.14);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
+.switcher-list { border-radius: 26px; }
+.switcher-list .item-box { border-radius: 18px; }
+.switcher-list .item-box:selected { background-color: rgba(124, 108, 255, 0.30); }
+.switcher-list .item-box:hover { background-color: rgba(236, 235, 250, 0.07); }
+.switcher-list .thumbnail-box { border-radius: 12px; }
+.osd-window { border-radius: 999px; color: #ECEBFA; }
+.osd-window .level, .osd-window .level:ltr, .osd-window .level:rtl {
+  -barlevel-background-color: rgba(236, 235, 250, 0.12);
+  -barlevel-active-background-color: #B7A9FF;
+  -barlevel-overdrive-color: #FF4D8D; }
+.ws-switcher-indicator:active, .workspace-switcher .ws-switcher-active-up, .workspace-switcher .ws-switcher-active-down {
+  background-color: #7C6CFF; }
+
+/* Écran de verrouillage : grande heure façon iOS / macOS */
+.unlock-dialog-clock { color: #ECEBFA; }
+.unlock-dialog-clock .unlock-dialog-clock-time {
+  font-family: "Inter Display", "Inter", sans-serif;
+  font-size: 7.4em;
+  font-weight: 600 !important; }
+.unlock-dialog-clock .unlock-dialog-clock-date {
+  font-family: "Inter", sans-serif;
+  font-size: 1.35em;
+  font-weight: 500 !important;
+  color: #D9D2FF; }
+.unlock-dialog-clock .unlock-dialog-clock-hint {
+  background-color: rgba(14, 14, 22, 0.55);
+  border: 1px solid rgba(183, 169, 255, 0.14);
+  color: #A9A9C2; }
+.unlock-dialog .login-dialog-prompt-entry { border-radius: 999px; }
+.unlock-dialog .login-dialog-prompt-entry:focus { border-color: #7C6CFF; }
 CSS
   cat > "$THEME_DIR/index.theme" <<EOF
 [Desktop Entry]
