@@ -1,0 +1,14 @@
+{
+  "name": "shadow-eclipse",
+  "displayName": "Shadow Éclipse",
+  "description": "Thème sombre de Shadow OS (palette Éclipse)",
+  "version": "1.0.0",
+  "publisher": "shadow-os",
+  "engines": { "vscode": "^1.70.0" },
+  "categories": ["Themes"],
+  "contributes": {
+    "themes": [
+      { "label": "Shadow Éclipse", "uiTheme": "vs-dark", "path": "./themes/shadow-eclipse-color-theme.json" }
+    ]
+  }
+}
