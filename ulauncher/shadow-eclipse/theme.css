@@ -1,0 +1,37 @@
+/* Shadow · Éclipse — lanceur façon Spotlight */
+@define-color window_bg rgba(14, 14, 22, 0.96);
+@define-color window_border_color rgba(183, 169, 255, 0.18);
+@define-color input_color #ECEBFA;
+@define-color caret_color #B7A9FF;
+@define-color item_name #ECEBFA;
+@define-color item_text #8E8DA8;
+@define-color item_box_selected rgba(124, 108, 255, 0.30);
+
+.app {
+    background-color: @window_bg;
+    border: 1px solid @window_border_color;
+    border-radius: 18px;
+}
+.input {
+    color: @input_color;
+    font-size: 170%;
+    font-weight: 500;
+}
+.input *:selected, .input *:focus, *:selected:focus {
+    background-color: rgba(124, 108, 255, 0.45);
+    color: #ffffff;
+}
+.item-name { color: @item_name; font-weight: 500; }
+.item-text { color: @item_text; }
+.selected.item-box {
+    background-color: @item_box_selected;
+    border: none;
+    border-radius: 12px;
+}
+.selected.item-box .item-name { color: #ffffff; }
+.selected.item-box .item-text { color: #D9D2FF; }
+.item-shortcut { color: #5E5D7A; text-shadow: none; }
+.selected.item-box .item-shortcut { color: #D9D2FF; text-shadow: none; }
+.prefs-btn { opacity: 0.55; }
+.prefs-btn:hover { background-color: rgba(236, 235, 250, 0.10); }
+.no-window-shadow { margin: -20px; }

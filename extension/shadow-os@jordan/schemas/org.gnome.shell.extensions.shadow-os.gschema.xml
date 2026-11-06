@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.shadow-os" path="/org/gnome/shell/extensions/shadow-os/">
+    <key name="lanceur" type="as">
+      <default><![CDATA[['<Alt>space']]]></default>
+      <summary>Ouvre la recherche (lanceur façon Spotlight)</summary>
+    </key>
+  </schema>
+</schemalist>
