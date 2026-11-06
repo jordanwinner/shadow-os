@@ -82,6 +82,20 @@ build(){
   background-color: #8D7FFF !important; }
 .quick-toggle-has-menu .quick-toggle-menu-button:checked { background-color: #6E5DF2 !important; }
 .quick-toggle-has-menu:checked .quick-toggle-separator { background-color: rgba(255,255,255,0.25) !important; }
+
+/* Dock flottant façon macOS : décollé du bord, verre teinté, liseré fin */
+#dashtodockContainer.bottom:ltr { padding-bottom: 10px; }
+#dashtodockContainer.bottom:ltr #dash .dash-background { margin-bottom: 0; border-radius: 22px; }
+#dashtodockContainer #dash .dash-background {
+  border-radius: 22px;
+  background-color: rgba(14, 14, 22, 0.55);
+  border: 1px solid rgba(183, 169, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+#dashtodockContainer .dash-item-container .overview-tile:hover .overview-icon,
+#dashtodockContainer .show-apps:hover .overview-icon { background-color: rgba(236, 235, 250, 0.08); border-radius: 14px; }
+#dashtodockContainer .show-apps .overview-icon { background-color: transparent; }
+#dashtodockContainer .show-apps:checked .overview-icon { background-color: rgba(124, 108, 255, 0.30); border-radius: 14px; }
+#dashtodockContainer .dash-separator { background-color: rgba(236, 235, 250, 0.14); width: 1px; margin: 6px 4px; }
 CSS
   cat > "$THEME_DIR/index.theme" <<EOF
 [Desktop Entry]
