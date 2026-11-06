@@ -1,0 +1,94 @@
+# Shadow — démarrage « Éclipse » : l'éclipse apparaît en fondu, fine barre de progression.
+
+Window.SetBackgroundTopColor(0.027, 0.027, 0.043);
+Window.SetBackgroundBottomColor(0.020, 0.020, 0.031);
+
+W = Window.GetWidth();
+H = Window.GetHeight();
+s = H / 1080;
+if (s < 0.6) s = 0.6;
+
+# --- logo -----------------------------------------------------------------
+taille = Math.Int(300 * s);
+logo.image = Image("logo.png").Scale(taille, taille);
+logo.sprite = Sprite(logo.image);
+logo.x = Math.Int(W / 2 - taille / 2);
+logo.y = Math.Int(H / 2 - taille / 2 - 50 * s);
+logo.sprite.SetPosition(logo.x, logo.y, 10);
+logo.sprite.SetOpacity(0);
+
+# --- barre de progression ---------------------------------------------------
+barre.l = Math.Int(220 * s);
+barre.h = Math.Int(4 * s); if (barre.h < 3) barre.h = 3;
+barre.x = Math.Int(W / 2 - barre.l / 2);
+barre.y = Math.Int(logo.y + taille + 26 * s);
+piste.sprite = Sprite(Image("piste.png").Scale(barre.l, barre.h));
+piste.sprite.SetPosition(barre.x, barre.y, 10);
+piste.sprite.SetOpacity(0);
+rempli.source = Image("remplissage.png");
+rempli.sprite = Sprite();
+rempli.sprite.SetPosition(barre.x, barre.y, 11);
+global.progres = 0;
+
+# --- animation : fondu d'entrée puis lente respiration du halo --------------
+global.temps = 0;
+fun rafraichir() {
+  global.temps = global.temps + 1;
+  o = global.temps / 45;
+  if (o > 1) o = 1;
+  respire = 0.92 + 0.08 * Math.Sin(global.temps / 22);
+  logo.sprite.SetOpacity(o * respire);
+  piste.sprite.SetOpacity(o);
+  rempli.sprite.SetOpacity(o);
+}
+Plymouth.SetRefreshFunction(rafraichir);
+
+fun avancer(duree, p) {
+  if (p < global.progres) return;
+  global.progres = p;
+  l = Math.Int(barre.l * p);
+  if (l < barre.h) l = barre.h;
+  rempli.sprite.SetImage(rempli.source.Scale(l, barre.h));
+}
+Plymouth.SetBootProgressFunction(avancer);
+
+# --- messages (fsck, etc.) --------------------------------------------------
+message.sprite = Sprite();
+message.sprite.SetPosition(0, Math.Int(H - 80 * s), 20);
+fun afficher_message(texte) {
+  img = Image.Text(texte, 0.66, 0.66, 0.76, 1, "Inter 12");
+  message.sprite.SetImage(img);
+  message.sprite.SetX(Math.Int(W / 2 - img.GetWidth() / 2));
+}
+Plymouth.SetMessageFunction(afficher_message);
+
+# --- mot de passe (disque chiffré) -------------------------------------------
+invite.sprite = Sprite();
+points.sprite = Sprite();
+fun afficher_mdp(texte, nb) {
+  img = Image.Text(texte, 0.93, 0.92, 0.98, 1, "Inter 13");
+  invite.sprite.SetImage(img);
+  invite.sprite.SetPosition(Math.Int(W / 2 - img.GetWidth() / 2), Math.Int(barre.y + 40 * s), 30);
+  puces = "";
+  for (i = 0; i < nb; i++) puces = puces + "● ";
+  if (puces == "") puces = " ";
+  pimg = Image.Text(puces, 0.72, 0.66, 1, 1, "Inter 14");
+  points.sprite.SetImage(pimg);
+  points.sprite.SetPosition(Math.Int(W / 2 - pimg.GetWidth() / 2), Math.Int(barre.y + 80 * s), 30);
+  piste.sprite.SetOpacity(0);
+  rempli.sprite.SetOpacity(0);
+}
+Plymouth.SetDisplayPasswordFunction(afficher_mdp);
+
+fun affichage_normal() {
+  invite.sprite.SetOpacity(0);
+  points.sprite.SetOpacity(0);
+  piste.sprite.SetOpacity(1);
+  rempli.sprite.SetOpacity(1);
+}
+Plymouth.SetDisplayNormalFunction(affichage_normal);
+
+fun quitter() {
+  logo.sprite.SetOpacity(1);
+}
+Plymouth.SetQuitFunction(quitter);

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <!-- Shadow — fond GRUB : éclipse en haut, place pour le menu en dessous -->
+  <defs>
+    <radialGradient id="ciel" gradientUnits="userSpaceOnUse" cx="960" cy="300" r="1300">
+      <stop offset="0" stop-color="#15132B"/><stop offset="0.45" stop-color="#0A0A14"/><stop offset="1" stop-color="#050508"/>
+    </radialGradient>
+    <radialGradient id="aura" gradientUnits="userSpaceOnUse" cx="945" cy="315" r="420">
+      <stop offset="0" stop-color="#7C6CFF" stop-opacity="0.32"/><stop offset="1" stop-color="#7C6CFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lumiere" gradientUnits="userSpaceOnUse" x1="840" y1="420" x2="1080" y2="180">
+      <stop offset="0" stop-color="#FF4D8D"/><stop offset="0.5" stop-color="#7C6CFF"/><stop offset="1" stop-color="#E2DCFF"/>
+    </linearGradient>
+    <mask id="eclipse"><rect width="1920" height="1080" fill="#fff"/><circle cx="996" cy="264" r="95" fill="#000"/></mask>
+    <filter id="flouL" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="24"/></filter>
+    <filter id="flouM" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.04 0"/></filter>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#ciel)"/>
+  <rect width="1920" height="1080" fill="url(#aura)"/>
+  <g filter="url(#flouL)" opacity="0.75"><circle cx="960" cy="300" r="110" fill="url(#lumiere)" mask="url(#eclipse)"/></g>
+  <g filter="url(#flouM)" opacity="0.8"><circle cx="960" cy="300" r="110" fill="url(#lumiere)" mask="url(#eclipse)"/></g>
+  <circle cx="960" cy="300" r="110" fill="url(#lumiere)" mask="url(#eclipse)"/>
+  <rect width="1920" height="1080" filter="url(#grain)"/>
+</svg>

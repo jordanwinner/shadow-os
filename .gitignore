@@ -1,3 +1,3 @@
 identite/rendus/
-*.pf2
+desktop/**/*.pf2
 __pycache__/

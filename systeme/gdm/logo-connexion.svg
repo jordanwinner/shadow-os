@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="64" viewBox="0 0 300 64">
+  <defs><linearGradient id="l" gradientUnits="userSpaceOnUse" x1="1" y1="15" x2="15" y2="1">
+    <stop offset="0" stop-color="#FF4D8D"/><stop offset="0.55" stop-color="#7C6CFF"/><stop offset="1" stop-color="#D9D2FF"/></linearGradient></defs>
+  <g transform="translate(2 2) scale(3.75)"><path d="M6.799 2.027 A6.6 6.6 0 1 0 13.973 9.201 A5.3 5.3 0 1 1 6.799 2.027 Z" fill="url(#l)"/></g>
+  <text x="76" y="45" font-family="Inter" font-weight="600" font-size="38" letter-spacing="0.5" fill="#ECEBFA">Shadow</text>
+</svg>
