@@ -1,0 +1,35 @@
+/* Shadow · Éclipse — extrait CSS pour Obsidian (thème sombre par défaut)
+   Installation : copier dans <coffre>/.obsidian/snippets/ puis
+   Paramètres › Apparence › Extraits CSS › activer « shadow-eclipse ». */
+.theme-dark {
+  --color-base-00: #07070B;
+  --color-base-05: #0B0B12;
+  --color-base-10: #0E0E16;
+  --color-base-20: #14141F;
+  --color-base-25: #1A1A28;
+  --color-base-30: #232334;
+  --color-base-35: #2C2C40;
+  --color-base-40: #34344C;
+  --color-base-50: #5E5D7A;
+  --color-base-60: #8E8DA8;
+  --color-base-70: #A9A9C2;
+  --color-base-100: #ECEBFA;
+  --color-accent: #7C6CFF;
+  --color-accent-1: #8D7FFF;
+  --color-accent-2: #B7A9FF;
+  --accent-h: 247; --accent-s: 100%; --accent-l: 71%;
+  --color-red: #FF4D8D; --color-orange: #FFB454; --color-yellow: #FFCB80;
+  --color-green: #4ADE9B; --color-cyan: #56D8F0; --color-blue: #6FA8FF; --color-purple: #B7A9FF; --color-pink: #FF7AA8;
+  --background-primary: #0E0E16;
+  --background-secondary: #0B0B12;
+  --titlebar-background: #07070B;
+  --text-selection: rgba(124, 108, 255, 0.35);
+  --link-color: #B7A9FF;
+  --link-external-color: #8BE9FF;
+  --code-background: #14141F;
+  --font-text-theme: 'Inter';
+  --font-monospace-theme: 'JetBrainsMono Nerd Font';
+}
+.theme-dark .markdown-rendered h1, .theme-dark .HyperMD-header-1 { color: #ECEBFA; }
+.theme-dark .markdown-rendered h2, .theme-dark .HyperMD-header-2 { color: #D9D2FF; }
+.theme-dark .markdown-rendered h3, .theme-dark .HyperMD-header-3 { color: #B7A9FF; }
