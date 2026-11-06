@@ -11,8 +11,8 @@ depuis le 2026-10-23) y sera intégré.
 
 | Phase | Contenu | État |
 |---|---|---|
-| 1. Fondations | identité, thème, flottant + tuiles avec bascule, arsenal cyber, couche Windows | en cours |
-| 2. Distribution | script d'installation, ISO (`live-build`), dépôt APT | — |
+| 1. Fondations | identité, thème, flottant + tuiles avec bascule, arsenal cyber, couche Windows | quasi fini |
+| 2. Distribution | script d'installation ✅, ISO (`live-build`), dépôt APT | en cours |
 | 3. Composants maison | centre de contrôle, lanceur, mode pentest, installateur, boutique | — |
 | 4. Bureau maison | shell/compositeur Shadow | — |
 
@@ -34,11 +34,29 @@ Un disque d'ombre passe devant la lumière : il ne reste qu'un croissant.
 - `scripts/rendre-svg.sh` : rendu SVG → PNG via Chrome headless
 - les PNG se régénèrent dans `identite/rendus/` (non versionnés)
 
+## Installation
+
+Pour (ré)appliquer Shadow sur une machine Ubuntu/Debian + GNOME :
+
+```bash
+./installer.sh              # modules utilisateur (extensions, thème, grille, scripts, terminal, apps)
+./installer.sh --tout       # + système (GRUB/Plymouth/login), arsenal Kali, bureau shadow-desktop
+./installer.sh --simuler --tout   # montre le plan sans rien modifier
+./installer.sh --liste      # liste les modules
+```
+
+L'installateur télécharge les extensions GNOME tierces depuis extensions.gnome.org
+selon la version du shell, lie l'extension Shadow, applique le thème et la grille,
+installe les scripts, le terminal et les apps. Idempotent : relançable sans risque.
+
 ## Commandes
 
 | Commande | Effet |
 |---|---|
 | `Super+T` ou `shadow mode bascule` | flottant (macOS) ⇄ tuiles (Omarchy) |
+| `shadow arsenal setup` | crée la box Kali isolée (distrobox + podman, sans toucher à Ubuntu) |
+| `shadow arsenal install <pack>` | installe un pack d'outils Kali (web, recon, reverse, passwords…) |
+| `shadow arsenal export <appli>` | ajoute une appli Kali à la grille (dossier « Arsenal ») |
 | `shadow mode restaurer` | remet les réglages d'avant le premier `shadow mode` |
 | `theme/eclipse.sh apply` | palette Éclipse : thème shell + GTK « Shadow », tuiles, dock |
 | `theme/eclipse.sh revert` | revient au thème d'avant (TokyoCombo / Tokyonight) |

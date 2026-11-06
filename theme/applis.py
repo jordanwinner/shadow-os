@@ -110,6 +110,9 @@ ICONES = {
 # ── dossiers de la grille (ordre = ordre d'affichage) ───────────────────────
 DOSSIERS = [
     ('Arsenal', 'Arsenal', [
+        'arsenal-kali-shell.desktop', 'arsenal-metasploit.desktop',
+        'arsenal-burpsuite.desktop', 'arsenal-zaproxy.desktop',
+        'kali-org.wireshark.Wireshark.desktop',
         'lynis.desktop', 'proton.vpn.app.gtk.desktop', 'proton-pass_proton-pass.desktop',
         'windscribe.desktop', 'org.torproject.torbrowser-launcher.desktop',
         'org.gnome.seahorse.Application.desktop',
