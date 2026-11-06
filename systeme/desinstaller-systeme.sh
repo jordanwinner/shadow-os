@@ -14,7 +14,7 @@ if [ -f "$SAUV/plymouth.orig" ] && [ -f "$(cat "$SAUV/plymouth.orig")" ]; then
   ok "Plymouth : $(basename "$(cat "$SAUV/plymouth.orig")" .plymouth) rétabli"
 fi
 
-rm -f /etc/dconf/db/gdm.d/90-shadow
+rm -f /etc/dconf/db/gdm.d/99-shadow /etc/dconf/db/gdm.d/90-shadow
 [ -f "$SAUV/profil-gdm-cree" ] && rm -f /etc/dconf/profile/gdm "$SAUV/profil-gdm-cree"
 dconf update && ok "écran de connexion d'origine"
 

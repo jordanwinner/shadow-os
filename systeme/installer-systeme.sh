@@ -60,7 +60,7 @@ if [ ! -f /etc/dconf/profile/gdm ]; then
   printf 'user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults\n' > /etc/dconf/profile/gdm
   touch "$SAUV/profil-gdm-cree"
 fi
-cat > /etc/dconf/db/gdm.d/90-shadow <<'EOF'
+cat > /etc/dconf/db/gdm.d/99-shadow <<'EOF'
 # Shadow OS — écran de connexion
 [com/ubuntu/login-screen]
 background-picture-uri='file:///usr/share/backgrounds/shadow/eclipse.png'
