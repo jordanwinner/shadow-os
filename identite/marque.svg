@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Shadow — marque seule (sans fond), pour terminal, écrans de démarrage, etc. -->
+  <defs>
+    <linearGradient id="l" gradientUnits="userSpaceOnUse" x1="90" y1="430" x2="420" y2="90">
+      <stop offset="0" stop-color="#FF4D8D"/><stop offset="0.5" stop-color="#7C6CFF"/><stop offset="1" stop-color="#D9D2FF"/>
+    </linearGradient>
+    <mask id="e"><rect width="512" height="512" fill="#fff"/><circle cx="300" cy="212" r="160" fill="#000"/></mask>
+  </defs>
+  <circle cx="240" cy="272" r="200" fill="url(#l)" mask="url(#e)"/>
+</svg>

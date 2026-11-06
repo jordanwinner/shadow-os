@@ -1,0 +1,28 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  // Shadow — accueil du terminal (palette Éclipse)
+  "logo": { "type": "file-raw", "source": "~/.local/share/shadow-os/logo.ansi", "padding": { "top": 1, "left": 2, "right": 4 } },
+  "display": {
+    "separator": "  ",
+    "color": { "keys": "38;2;183;169;255", "title": "1;38;2;236;235;250", "separator": "38;2;74;74;102" },
+    "key": { "width": 11 }
+  },
+  "modules": [
+    { "type": "title", "format": "{user-name}\u001b[38;2;124;108;255m@\u001b[1;38;2;236;235;250m{host-name}" },
+    { "type": "custom", "format": "\u001b[38;2;74;74;102m──────────────────────────────" },
+    { "type": "os",       "key": "󰽥 OS",    "format": "Shadow \u001b[38;2;110;110;140m· base {name} {version-id}" },
+    { "type": "kernel",   "key": " NOYAU" },
+    { "type": "uptime",   "key": "󰅐 ALLUMÉ" },
+    { "type": "packages", "key": "󰏖 PAQUETS", "format": "{all} · {dpkg} deb · {flatpak-all} flatpak · {snap} snap" },
+    { "type": "shell",    "key": " SHELL" },
+    { "type": "de",       "key": " BUREAU" },
+    { "type": "custom", "format": "\u001b[38;2;74;74;102m──────────────────────────────" },
+    { "type": "cpu",      "key": " CPU",    "keyColor": "38;2;255;122;168", "format": "{name} · {cores-logical} cœurs" },
+    { "type": "gpu",      "key": "󰢮 GPU",    "keyColor": "38;2;255;122;168", "format": "{name}" },
+    { "type": "memory",   "key": " MÉMOIRE", "keyColor": "38;2;255;122;168" },
+    { "type": "disk",     "key": "󰋊 DISQUE", "keyColor": "38;2;255;122;168", "folders": "/", "format": "{size-used} / {size-total} ({size-percentage})" },
+    { "type": "localip",  "key": "󰩟 IP",     "keyColor": "38;2;255;122;168" },
+    "break",
+    { "type": "colors", "symbol": "circle" }
+  ]
+}

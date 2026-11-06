@@ -31,6 +31,10 @@ GTK3="$HOME/.config/gtk-3.0/gtk.css"
 DEBUT="/* >>> SHADOW-DESKTOP >>> */"   # mêmes marqueurs que shadow-desktop :
 FIN="/* <<< SHADOW-DESKTOP <<< */"     # un seul bloc palette, jamais deux
 TS=(gsettings --schemadir "$HOME/.local/share/gnome-shell/extensions/tilingshell@ferrarodomenico.com/schemas")
+SB=(gsettings --schemadir "$HOME/.local/share/gnome-shell/extensions/space-bar@luchrioh/schemas")
+SBA=org.gnome.shell.extensions.space-bar.appearance
+LM=(gsettings --schemadir "$HOME/.local/share/gnome-shell/extensions/logomenu@aryan_k/schemas")
+LMS=org.gnome.shell.extensions.logo-menu
 DTD=(gsettings --schemadir "$HOME/.local/share/gnome-shell/extensions/dash-to-dock@micxgx.gmail.com/schemas")
 
 ok(){ printf '  \033[32m✓\033[0m %s\n' "$*"; }
@@ -130,6 +134,42 @@ EOF
 }
 
 cle(){ "$@" 2>/dev/null || echo "?"; }
+ICI="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+# ── Barre du haut : logo Shadow + pastilles d'espaces de travail ─────────────
+SB_KEYS=(active-workspace-background-color active-workspace-text-color inactive-workspace-background-color
+         inactive-workspace-text-color empty-workspace-text-color application-styles)
+barre(){
+  if [ ! -f "$SAUV_DIR/barre.txt" ]; then
+    { for k in "${SB_KEYS[@]}"; do printf 'sb|%s|%s\n' "$k" "$("${SB[@]}" get $SBA "$k")"; done
+      for k in use-custom-icon custom-icon-path; do printf 'lm|%s|%s\n' "$k" "$("${LM[@]}" get $LMS "$k")"; done
+    } > "$SAUV_DIR/barre.txt"
+  fi
+  local ico="$HOME/.local/share/icons/hicolor/scalable/apps"
+  mkdir -p "$ico"
+  command cp -f "$ICI/../identite/icones/shadow-symbolic.svg" "$ico/shadow-os-eclipse-symbolic.svg"
+  "${LM[@]}" set $LMS custom-icon-path "$ico/shadow-os-eclipse-symbolic.svg"
+  "${LM[@]}" set $LMS use-custom-icon true
+  local act='rgba(124,108,255,1)' act_t='rgba(255,255,255,1)' ina='rgba(236,235,250,0.07)'
+  local ina_t='rgba(236,235,250,0.85)' vide_t='rgba(169,169,194,0.45)'
+  "${SB[@]}" set $SBA active-workspace-background-color "$act"
+  "${SB[@]}" set $SBA active-workspace-text-color "$act_t"
+  "${SB[@]}" set $SBA inactive-workspace-background-color "$ina"
+  "${SB[@]}" set $SBA inactive-workspace-text-color "$ina_t"
+  "${SB[@]}" set $SBA empty-workspace-text-color "$vide_t"
+  local css; css=$("${SB[@]}" get $SBA application-styles)
+  css=${css//rgba(122,162,247,1)/$act}; css=${css//rgba(22,22,30,1)/$act_t}
+  css=${css//rgba(192,202,245,0.08)/$ina}; css=${css//rgba(192,202,245,0.9)/$ina_t}
+  css=${css//rgba(169,177,214,0.45)/$vide_t}
+  "${SB[@]}" set $SBA application-styles "$css"
+  ok "logo Shadow dans la barre · pastilles d'espaces en Éclipse"
+}
+barre_revert(){
+  [ -f "$SAUV_DIR/barre.txt" ] || return 0
+  while IFS='|' read -r s k v; do
+    case "$s" in sb) "${SB[@]}" set $SBA "$k" "$v";; lm) "${LM[@]}" set $LMS "$k" "$v";; esac
+  done < "$SAUV_DIR/barre.txt"
+}
+
 
 # ── Thème GTK3/GTK4 « Shadow » : Tokyonight-Dark recoloré en Éclipse ───────────
 GTK_SRC="$HOME/.themes/Tokyonight-Dark"
@@ -215,6 +255,9 @@ apply(){
   [ -L "$GTK3" ] || bloc_gtk "$GTK3"
   ok "gtk-theme = Shadow · ~/.config/gtk-4.0 → ~/.themes/Shadow (relancer les applis ouvertes)"
 
+  titre "Barre du haut"
+  barre
+
   titre "Tuiles et dock"
   "${TS[@]}" set org.gnome.shell.extensions.tilingshell window-use-custom-border-color true
   "${TS[@]}" set org.gnome.shell.extensions.tilingshell window-border-color "$ECLIPSE"
@@ -235,6 +278,7 @@ revert(){
     while read -r l _ cible; do [ -n "$cible" ] && ln -sfn "$cible" "$HOME/.config/gtk-4.0/$l"; done < "$SAUV_DIR/liens-gtk4.txt"
   fi
   [ ! -L "$GTK3" ] && [ -f "$SAUV_DIR/gtk-3.0.css" ] && command cp -f "$SAUV_DIR/gtk-3.0.css" "$GTK3"
+  barre_revert
   ok "état d'avant Éclipse restauré"
 }
 
