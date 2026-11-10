@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Écran tactile
+Comment=Activer ou désactiver l'écran tactile
+Exec=/home/jordan/Shadow/apps/ecran-tactile/ecran-tactile.py
+Icon=os.shadow.EcranTactile
+Categories=Settings;HardwareSettings;
+Keywords=tactile;touchscreen;écran;toucher;
+StartupNotify=true

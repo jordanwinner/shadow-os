@@ -1,0 +1,5 @@
+# Shadow OS : écran tactile ignoré par libinput tant que le fichier
+# /etc/shadow-os/ecran-tactile-desactive existe (géré par shadow-ecran-tactile).
+# La 2e ligne annule l'ancienne règle 99-disable-touchscreen.rules quand il est activé.
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_TOUCHSCREEN}=="1", TEST=="/etc/shadow-os/ecran-tactile-desactive", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_TOUCHSCREEN}=="1", TEST!="/etc/shadow-os/ecran-tactile-desactive", ENV{LIBINPUT_IGNORE_DEVICE}=""

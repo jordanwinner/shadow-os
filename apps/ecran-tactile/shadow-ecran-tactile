@@ -1,0 +1,56 @@
+#!/bin/sh
+# shadow-ecran-tactile — active ou désactive l'écran tactile (Shadow OS).
+# Usage : shadow-ecran-tactile on | off | etat
+#
+# La désactivation passe par libinput (règle udev 99-shadow-ecran-tactile.rules,
+# conditionnée par le fichier ci-dessous) : fiable sous Wayland, conservée au
+# redémarrage. Pour appliquer tout de suite, le pilote HID de l'écran tactile
+# est détaché puis rattaché : GNOME voit le périphérique disparaître et revenir.
+set -eu
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+DRAPEAU=/etc/shadow-os/ecran-tactile-desactive
+
+# Dossiers sysfs des périphériques HID qui portent un écran tactile
+peripheriques_hid() {
+    for ev in /sys/class/input/event*; do
+        [ -e "$ev" ] || continue
+        if udevadm info -q property -p "$ev" 2>/dev/null | grep -qx 'ID_INPUT_TOUCHSCREEN=1'; then
+            readlink -f "$ev/device/device"
+        fi
+    done | sort -u
+}
+
+etat() {
+    if [ -e "$DRAPEAU" ]; then echo desactive; else echo actif; fi
+}
+
+recharger() {
+    trouve=0
+    for hid in $(peripheriques_hid); do
+        pilote=$(readlink -f "$hid/driver" 2>/dev/null) || continue
+        nom=$(basename "$hid")
+        printf '%s' "$nom" > "$pilote/unbind"
+        sleep 0.3
+        printf '%s' "$nom" > "$pilote/bind"
+        trouve=1
+    done
+    udevadm settle --timeout=5 || true
+    [ "$trouve" = 1 ] || { echo "aucun écran tactile détecté" >&2; exit 3; }
+}
+
+case "${1:-etat}" in
+    on|activer)
+        rm -f "$DRAPEAU"
+        recharger
+        etat ;;
+    off|desactiver)
+        mkdir -p "$(dirname "$DRAPEAU")"
+        : > "$DRAPEAU"
+        recharger
+        etat ;;
+    etat|status)
+        etat ;;
+    *)
+        echo "usage : $0 on | off | etat" >&2
+        exit 2 ;;
+esac
