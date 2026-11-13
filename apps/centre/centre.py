@@ -19,10 +19,11 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 ICI = os.path.dirname(os.path.realpath(__file__))
 APPS = os.path.dirname(ICI)
-for dossier in ('modes', 'energie'):
+for dossier in ('modes', 'energie', 'arsenal'):
     sys.path.insert(0, os.path.join(APPS, dossier))
 import energie   # noqa: E402
 import modes     # noqa: E402
+import shadow_cible  # noqa: E402
 import shadow_modes as moteur  # noqa: E402
 
 APP_ID = 'os.shadow.Centre'
@@ -150,6 +151,8 @@ def etat_systeme():
     e['box_existe'] = bool(shutil.which('podman')) and subprocess.run(
         ['podman', 'container', 'exists', BOX], capture_output=True).returncode == 0
     e['box_active'] = e['box_existe'] and sortie('podman', 'ps', '--filter', f'name=^{BOX}$', '--format', '{{.Names}}') == BOX
+    e['cible'] = shadow_cible.lire() or {}
+    e['terminaux'] = shadow_cible.shells_branches()
     e['tactile_dispo'] = os.access(TACTILE, os.X_OK)
     e['tactile'] = not os.path.exists(TACTILE_DRAPEAU)
     return e
@@ -293,7 +296,16 @@ class Centre(Adw.ApplicationWindow):
             self.t_energie.regler(ENERGIES.get(e['energie'], '—'), 'Puissance et ventilation')
             self.t_fenetres.regler('Tuiles' if e['fenetres'] == 'tuiles' else 'Flottantes', 'Super+T pour basculer')
             self.t_fond.regler('Diaporama' if e['diaporama'] else 'Fond fixe', e['fond'][:26])
-            self.t_arsenal.regler('Démarrée' if e['box_active'] else ('Arrêtée' if e['box_existe'] else 'Non installée'), 'Box Kali')
+            cible = e['cible'].get('cible')
+            self.t_arsenal.regler('Démarrée' if e['box_active'] else ('Arrêtée' if e['box_existe'] else 'Non installée'),
+                                  f'Cible : {cible}' if cible else 'Box Kali')
+            self.r_cible.set_title(cible or 'Aucune cible')
+            self.r_cible.set_subtitle(f'Mission {e["cible"]["nom"]} · {e["cible"]["dossier"]}' if cible
+                                      else 'Fixe une cible pour l’afficher dans l’îlot')
+            self.b_fin.set_visible(bool(cible))
+            self.b_dossier.set_visible(bool(cible))
+            self.r_terminaux.set_subtitle(('Branchés : ' + ', '.join('~/' + t for t in e['terminaux'])) if e['terminaux']
+                                          else 'Non branchés. Dans un terminal : shadow-cible terminaux')
             self.fiche_mode.set_label(f'Mode {m["nom"]}')
 
             self.r_fenetres.set_selected(1 if e['fenetres'] == 'tuiles' else 0)
@@ -478,6 +490,30 @@ class Centre(Adw.ApplicationWindow):
         groupe.add(rangee)
         page.add(groupe)
 
+        groupe = Adw.PreferencesGroup(title='Mission', description='La cible de la mission s’affiche en permanence dans l’îlot')
+        self.r_cible = Adw.ActionRow(title='Aucune cible')
+        self.b_dossier = Gtk.Button(label='Dossier', valign=Gtk.Align.CENTER)
+        self.b_dossier.connect('clicked', lambda *_a: self.e.get('cible', {}).get('dossier') and
+                               lancer(['xdg-open', self.e['cible']['dossier']]))
+        self.b_fin = Gtk.Button(label='Terminer', valign=Gtk.Align.CENTER)
+        self.b_fin.connect('clicked', self._sur_fin_mission)
+        self.r_cible.add_suffix(self.b_dossier)
+        self.r_cible.add_suffix(self.b_fin)
+        groupe.add(self.r_cible)
+        self.s_adresse = Adw.EntryRow(title='Adresse (IP, nom d’hôte ou plage)')
+        self.s_nom = Adw.EntryRow(title='Nom de la mission (facultatif)')
+        fixer = Gtk.Button(label='Fixer la cible', valign=Gtk.Align.CENTER)
+        fixer.add_css_class('suggested-action')
+        fixer.connect('clicked', self._sur_cible)
+        self.s_adresse.connect('entry-activated', self._sur_cible)
+        self.s_nom.connect('entry-activated', self._sur_cible)
+        self.s_nom.add_suffix(fixer)
+        groupe.add(self.s_adresse)
+        groupe.add(self.s_nom)
+        self.r_terminaux = Adw.ActionRow(title='Variables $CIBLE, $TARGET et $MISSION dans les terminaux')
+        groupe.add(self.r_terminaux)
+        page.add(groupe)
+
         groupe = Adw.PreferencesGroup(title='Mode Pentest')
         rangee = Adw.ActionRow(title='Passer en mode Pentest',
                                subtitle='Fond « cible », tuiles, ne pas déranger, HUD, box démarrée et terminal ouvert')
@@ -488,6 +524,28 @@ class Centre(Adw.ApplicationWindow):
         groupe.add(rangee)
         page.add(groupe)
         return page
+
+    def _sur_cible(self, *_a):
+        adresse = self.s_adresse.get_text().strip()
+        if not adresse:
+            return
+        if not shadow_cible.ADRESSE.match(adresse):
+            self.toast('Adresse invalide : IP, nom d’hôte ou plage CIDR attendus')
+            return
+        try:
+            shadow_cible.fixer(adresse, self.s_nom.get_text().strip() or None)
+        except (OSError, SystemExit) as err:
+            self.toast(f'Échec : {err}')
+            return
+        self.s_adresse.set_text('')
+        self.s_nom.set_text('')
+        self.toast(f'Cible fixée : {adresse}')
+        self.rafraichir()
+
+    def _sur_fin_mission(self, _b):
+        shadow_cible.terminer()
+        self.toast('Mission terminée, dossier conservé')
+        self.rafraichir()
 
     def _sur_box(self, _b):
         if self.e.get('box_active'):
