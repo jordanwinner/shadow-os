@@ -373,6 +373,12 @@ button.mo-carte:focus-visible { outline: 2px solid alpha(@window_fg_color, 0.28)
 .mo-carte-nom { font-size: 17px; font-weight: 750; }
 .mo-carte-sous { font-size: 13px; color: alpha(@window_fg_color, 0.50); }
 .mo-point { min-width: 9px; min-height: 9px; border-radius: 999px; }
+.mo-routine {
+  padding: 14px 16px; border-radius: 20px;
+  background-color: alpha(@window_fg_color, 0.045);
+  border: 1.5px solid alpha(@window_fg_color, 0.07);
+}
+.mo-routine-titre { font-size: 15.5px; font-weight: 700; }
 """
 
 
@@ -581,6 +587,33 @@ class Fenetre(Adw.ApplicationWindow):
             carte.connect('toggled', self._sur_carte)
             self.cartes[m['id']] = carte
             droite.append(carte)
+
+        # routine façon téléphone : le mode Nuit se met tout seul le soir
+        routine = etat.get('routine') or moteur.config()
+        section2 = Gtk.Label(label='ROUTINE', xalign=0)
+        section2.add_css_class('mo-section')
+        section2.set_margin_start(6)
+        section2.set_margin_top(10)
+        section2.set_margin_bottom(2)
+        droite.append(section2)
+        ligne = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+        ligne.add_css_class('mo-routine')
+        textes = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        textes.set_hexpand(True)
+        textes.set_valign(Gtk.Align.CENTER)
+        t = Gtk.Label(label='Nuit automatique', xalign=0)
+        t.add_css_class('mo-routine-titre')
+        d = Gtk.Label(label=f'De {routine["nuit_debut"]} à {routine["nuit_fin"]}, puis retour au Quotidien', xalign=0, wrap=True)
+        d.add_css_class('mo-carte-sous')
+        textes.append(t)
+        textes.append(d)
+        ligne.append(textes)
+        self.bascule_nuit = Gtk.Switch()
+        self.bascule_nuit.set_valign(Gtk.Align.CENTER)
+        self.bascule_nuit.set_active(bool(routine.get('nuit_auto')))
+        self.bascule_nuit.connect('notify::active', self._sur_routine)
+        ligne.append(self.bascule_nuit)
+        droite.append(ligne)
         racine.append(droite)
 
         vue.set_content(racine)
@@ -643,6 +676,30 @@ class Fenetre(Adw.ApplicationWindow):
         self.retour.set_sensitive(not self._en_cours)
         for ident, carte in self.cartes.items():
             carte.marquer(ident == self.actif)
+
+    # --- routine ---------------------------------------------------------------------
+    def _sur_routine(self, bascule, _pspec):
+        voulu = bascule.get_active()
+        trace('routine', voulu)
+        try:
+            proc = Gio.Subprocess.new([MOTEUR, 'auto', 'on' if voulu else 'off'],
+                                      Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE)
+        except GLib.Error as e:
+            self.toasts.add_toast(Adw.Toast(title=e.message))
+            return
+
+        def fini(p, res):
+            try:
+                p.communicate_utf8_finish(res)
+                ok = p.get_successful()
+            except GLib.Error:
+                ok = False
+            texte = ('Nuit automatique activée' if voulu else 'Nuit automatique désactivée') if ok else 'Échec du réglage de la routine'
+            toast = Adw.Toast(title=texte)
+            toast.set_timeout(2)
+            self.toasts.add_toast(toast)
+            self._relire()
+        proc.communicate_utf8_async(None, None, fini)
 
     # --- activation --------------------------------------------------------------
     def _activer(self, ident):

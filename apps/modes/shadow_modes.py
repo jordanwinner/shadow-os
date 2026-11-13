@@ -12,8 +12,11 @@ Usage :
   shadow-modes activer ID      active un mode (pentest, focus, jeu, nuit…)
   shadow-modes quotidien       revient au bureau habituel
   shadow-modes etat            identifiant du mode actif
+  shadow-modes auto [on|off|etat] [DEBUT FIN]
+                               routine « Nuit automatique » (ex. : auto on 22:00 06:00)
   shadow-modes json            tout l'état, pour l'appli Modes
 """
+import datetime
 import glob
 import json
 import os
@@ -29,6 +32,13 @@ ACTUEL = os.path.join(ETAT_DIR, 'actuel')
 BASE = os.path.join(ETAT_DIR, 'quotidien.json')
 FONDS = MAISON + '/.local/share/backgrounds/shadow'
 BASE_ID = 'quotidien'
+# routine « Nuit automatique »
+CONFIG = os.path.join(os.environ.get('XDG_CONFIG_HOME', MAISON + '/.config'), 'shadow-os', 'modes.json')
+AUTO = os.path.join(ETAT_DIR, 'auto')               # présent : le mode en cours a été mis par la routine
+PASSE = os.path.join(ETAT_DIR, 'nuit-passee')       # nuit que l'utilisateur a refusée (ne pas insister)
+MODE_NUIT = 'nuit'
+UNITES = MAISON + '/.config/systemd/user'
+MINUTEUR = 'shadow-modes-routine.timer'
 
 ILOT_SCHEMAS = MAISON + '/.local/share/gnome-shell/extensions/dynamic-island-v2@jordan/schemas'
 ILOT = 'org.gnome.shell.extensions.dynamic-island-v2'
@@ -290,8 +300,12 @@ def photographier():
     return {l.nom: l.lire() for l in LEVIERS if l.dispo()}
 
 
-def activer(ident, annoncer=True):
-    """Active un mode. Rend la liste des réglages qui ont échoué."""
+def activer(ident, annoncer=True, auto=False):
+    """Active un mode. Rend la liste des réglages qui ont échoué.
+
+    auto=True : appel de la routine. Un changement fait à la main pendant une nuit
+    automatique est respecté : la routine ne réactivera pas la nuit avant le lendemain.
+    """
     m = mode(ident)
     if not m:
         raise ValueError(f'mode inconnu : {ident}')
@@ -321,6 +335,16 @@ def activer(ident, annoncer=True):
 
     with open(ACTUEL, 'w') as f:
         f.write(ident + '\n')
+    if auto and ident != BASE_ID:
+        open(AUTO, 'w').close()
+    else:
+        if not auto and os.path.exists(AUTO) and avant == MODE_NUIT and ident != MODE_NUIT:
+            with open(PASSE, 'w') as f:
+                f.write(nuit_en_cours(config()) or '')
+        try:
+            os.unlink(AUTO)
+        except OSError:
+            pass
     if ident == BASE_ID:
         try:
             os.unlink(BASE)
@@ -339,7 +363,90 @@ def activer(ident, annoncer=True):
 
 
 def etat_complet():
-    return {'actuel': actuel(), 'base': base(), 'modes': modes()}
+    return {'actuel': actuel(), 'base': base(), 'modes': modes(), 'routine': config()}
+
+
+# --- routine « Nuit automatique » ----------------------------------------------
+def config():
+    c = {'nuit_auto': False, 'nuit_debut': '22:00', 'nuit_fin': '06:00'}
+    try:
+        with open(CONFIG) as f:
+            c.update(json.load(f))
+    except (OSError, ValueError):
+        pass
+    return c
+
+
+def heure(texte):
+    h, m = texte.split(':')
+    h, m = int(h), int(m)
+    if not (0 <= h < 24 and 0 <= m < 60):
+        raise ValueError(texte)
+    return datetime.time(h, m)
+
+
+def nuit_en_cours(c, maintenant=None):
+    """Identifiant de la nuit en cours (date de son début), ou None en journée."""
+    n = maintenant or datetime.datetime.now()
+    debut, fin = heure(c['nuit_debut']), heure(c['nuit_fin'])
+    t = n.time()
+    if debut <= fin:                                    # plage dans la même journée
+        return n.date().isoformat() if debut <= t < fin else None
+    if t >= debut:                                      # plage à cheval sur minuit, côté soir
+        return n.date().isoformat()
+    if t < fin:                                         # … côté matin : la nuit a commencé la veille
+        return (n.date() - datetime.timedelta(days=1)).isoformat()
+    return None
+
+
+def routine(maintenant=None):
+    """Appelée toutes les 5 min : met le mode Nuit le soir, rend le bureau habituel le matin."""
+    c = config()
+    nuit = nuit_en_cours(c, maintenant) if c['nuit_auto'] else None
+    a, par_routine = actuel(), os.path.exists(AUTO)
+    if nuit and a == BASE_ID:
+        try:
+            with open(PASSE) as f:
+                if f.read().strip() == nuit:            # refusée ce soir : on n'insiste pas
+                    return 'nuit refusée ce soir'
+        except OSError:
+            pass
+        if mode(MODE_NUIT):
+            activer(MODE_NUIT, auto=True)
+            return 'nuit activée'
+    elif not nuit and par_routine and a == MODE_NUIT:
+        activer(BASE_ID, auto=True)
+        return 'retour au quotidien'
+    return 'rien à faire'
+
+
+def regler_auto(actif, debut=None, fin=None):
+    """Enregistre la routine et (dés)active son minuteur systemd utilisateur."""
+    c = config()
+    c['nuit_auto'] = bool(actif)
+    if debut:
+        heure(debut); c['nuit_debut'] = debut
+    if fin:
+        heure(fin); c['nuit_fin'] = fin
+    os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
+    with open(CONFIG, 'w') as f:
+        json.dump(c, f, indent=1)
+    os.makedirs(UNITES, exist_ok=True)
+    moi = os.path.realpath(__file__)
+    with open(os.path.join(UNITES, 'shadow-modes-routine.service'), 'w') as f:
+        f.write(f'[Unit]\nDescription=Shadow — routine des modes (Nuit automatique)\n\n'
+                f'[Service]\nType=oneshot\nExecStart={moi} routine\n')
+    with open(os.path.join(UNITES, MINUTEUR), 'w') as f:
+        f.write('[Unit]\nDescription=Shadow — routine des modes, toutes les 5 minutes\n\n'
+                '[Timer]\nOnCalendar=*:0/5\nOnStartupSec=45\nPersistent=false\n\n'
+                '[Install]\nWantedBy=timers.target\n')
+    sh('systemctl', '--user', 'daemon-reload')
+    sh('systemctl', '--user', 'enable' if actif else 'disable', '--now', MINUTEUR)
+    if actif:
+        routine()
+    elif os.path.exists(AUTO) and actuel() == MODE_NUIT:    # coupée en pleine nuit automatique : on rend le bureau
+        activer(BASE_ID, auto=True)
+    return c
 
 
 # --- ligne de commande --------------------------------------------------------
@@ -351,6 +458,20 @@ def main(argv):
             print(f'{"●" if m["id"] == a else "○"} {m["id"]:<10} {m["nom"]:<11} {m.get("accroche", "")}')
     elif cmd in ('etat', 'status'):
         print(actuel())
+    elif cmd == 'routine':
+        print(routine())
+    elif cmd == 'auto':
+        sous = argv[2] if len(argv) > 2 else 'etat'
+        try:
+            if sous in ('on', 'off'):
+                c = regler_auto(sous == 'on', *(argv[3:5]))
+            elif sous == 'etat':
+                c = config()
+            else:
+                sys.exit('usage : shadow-modes auto [on|off|etat] [DEBUT FIN]')
+        except ValueError:
+            sys.exit('heure invalide (format HH:MM)')
+        print(f'Nuit automatique : {"activée" if c["nuit_auto"] else "désactivée"} · {c["nuit_debut"]} → {c["nuit_fin"]}')
     elif cmd == 'json':
         json.dump(etat_complet(), sys.stdout, indent=1, ensure_ascii=False)
         print()
