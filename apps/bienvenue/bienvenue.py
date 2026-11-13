@@ -19,6 +19,13 @@ LOGO = os.path.join(RACINE, 'identite', 'logo.svg')
 ETAT = os.path.expanduser('~/.local/state/shadow-os')
 MASQUE = os.path.join(ETAT, 'bienvenue-masquee')
 MODE = os.path.expanduser('~/.local/bin/shadow-mode')
+CENTRE = os.path.join(os.path.dirname(ICI), 'centre', 'centre.py')
+sys.path.insert(0, os.path.join(os.path.dirname(ICI), 'modes'))
+try:
+    import shadow_modes                     # les ambiances présentées viennent de leurs vraies définitions
+    AMBIANCES = [m for m in shadow_modes.modes() if m['id'] != shadow_modes.BASE_ID]
+except Exception:                           # appli Modes absente : la page est simplement omise
+    AMBIANCES = []
 
 CSS = """
 .bv-titre { font-size: 40px; font-weight: 700; letter-spacing: -0.4px; }
@@ -31,6 +38,11 @@ CSS = """
 }
 .bv-carte.active { border-color: #7C6CFF; background-color: alpha(#7C6CFF, 0.12); }
 .bv-carte-titre { font-size: 22px; font-weight: 700; }
+.bv-ambiance { padding: 18px 16px; }
+.bv-ambiance .bv-carte-titre { font-size: 19px; }
+.bv-ambiance .bv-carte-texte { font-size: 13.5px; }
+.bv-pastille { min-width: 46px; min-height: 46px; border-radius: 14px; }
+.bv-pastille image { color: white; }
 .bv-carte-texte { font-size: 15px; color: alpha(@window_fg_color, 0.66); }
 .bv-touche {
   font-family: 'JetBrainsMono Nerd Font', monospace;
@@ -97,7 +109,11 @@ class Bienvenue(Adw.ApplicationWindow):
 
         self.carrousel = Adw.Carousel(hexpand=True, vexpand=True, allow_scroll_wheel=False)
         self.carrousel.connect('page-changed', lambda *_: self._maj_boutons())
-        for p in (self._page_accueil(), self._page_modes(), self._page_raccourcis(), self._page_fin()):
+        pages = [self._page_accueil(), self._page_modes()]
+        if AMBIANCES:
+            pages.append(self._page_ambiances())
+        pages += [self._page_raccourcis(), self._page_fin()]
+        for p in pages:
             self.carrousel.append(p)
 
         points = Adw.CarouselIndicatorDots(carousel=self.carrousel)
@@ -155,10 +171,30 @@ class Bienvenue(Adw.ApplicationWindow):
         self._marquer_mode(mode_courant())
         return page('Deux façons de travailler', 'Choisis ton style ; tu peux en changer quand tu veux.', contenu)
 
+    def _page_ambiances(self):
+        grille = Gtk.Box(spacing=14, homogeneous=True, width_request=940)
+        for m in AMBIANCES:
+            carte = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, css_classes=['bv-carte', 'bv-ambiance'])
+            pastille = Gtk.Box(css_classes=['bv-pastille', f'bv-m-{m["id"]}'], halign=Gtk.Align.START, hexpand=False)
+            pastille.append(Gtk.Image(icon_name=m.get('symbole', 'shadow-os-symbolic'), pixel_size=24, hexpand=True))
+            carte.append(pastille)
+            carte.append(Gtk.Label(label=m['nom'], css_classes=['bv-carte-titre'], xalign=0, margin_top=4))
+            carte.append(Gtk.Label(label=m.get('accroche', ''), css_classes=['bv-carte-texte'], xalign=0, wrap=True))
+            grille.append(carte)
+        bas = Gtk.Box(spacing=8, halign=Gtk.Align.CENTER, margin_top=18)
+        bas.append(Gtk.Label(label='Changer d’ambiance depuis l’îlot, ou avec', css_classes=['bv-carte-texte']))
+        bas.append(touches('Super+Maj+M'))
+        contenu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        contenu.append(grille)
+        contenu.append(bas)
+        return page('Une ambiance pour chaque moment',
+                    'Un mode change tout le bureau d’un coup, comme sur un téléphone. '
+                    'En le quittant, tu retrouves ton bureau tel que tu l’avais laissé.', contenu)
+
     def _page_raccourcis(self):
         liste = Gtk.ListBox(css_classes=['boxed-list', 'bv-liste'], selection_mode=Gtk.SelectionMode.NONE, width_request=620)
         for combo, quoi in (('Super', 'Vue d’ensemble'), ('Super+A', 'Toutes les applications'),
-                            ('Alt+Espace', 'Rechercher, lancer une appli'), ('Super+T', 'Flottant ⇄ tuiles'),
+                            ('Alt+Espace', 'Rechercher, lancer une appli'), ('Super+T', 'Flottant ⇄ tuiles'), ('Super+Maj+M', 'Modes et Centre Shadow'),
                             ('Super+Maj+W', 'Fond d’écran suivant'), ('Super+Maj+K', 'Afficher les touches à l’écran')):
             ligne = Adw.ActionRow(title=quoi)
             ligne.add_suffix(touches(combo))
@@ -172,6 +208,10 @@ class Bienvenue(Adw.ApplicationWindow):
         liste = Gtk.ListBox(css_classes=['boxed-list', 'bv-liste'], selection_mode=Gtk.SelectionMode.NONE, width_request=520)
         liste.append(demarrage)
         boite.append(liste)
+        if os.access(CENTRE, os.X_OK):
+            centre = Gtk.Button(label='Ouvrir le Centre Shadow', css_classes=['pill'], halign=Gtk.Align.CENTER, margin_top=6)
+            centre.connect('clicked', lambda *_: lancer(CENTRE))
+            boite.append(centre)
         return page('Shadow est prêt', 'Bonne création. Tu retrouveras cette présentation dans Utilitaires › Bienvenue.',
                     boite, logo=True)
 
@@ -229,7 +269,9 @@ class App(Adw.Application):
     def _activer(self, _app):
         Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.PREFER_DARK)
         css = Gtk.CssProvider()
-        css.load_from_string(CSS)
+        css.load_from_string(CSS + ''.join(
+            f'.bv-pastille.bv-m-{m["id"]} {{ background-image: linear-gradient(135deg, {m["couleurs"][0]}, {m["couleurs"][1]}); }}\n'
+            for m in AMBIANCES if len(m.get('couleurs') or []) >= 2))
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css,
                                                   Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         (self.get_active_window() or Bienvenue(self)).present()

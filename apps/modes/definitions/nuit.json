@@ -4,7 +4,7 @@
   "nom": "Nuit",
   "accroche": "Lumière chaude, écran calme, PC au frais.",
   "icone": "weather-clear-night",
-  "symbole": "weather-clear-night-symbolic",
+  "symbole": "shadow-mode-nuit-symbolic",
   "couleurs": [
     "#FF9A4D",
     "#B8501B"
