@@ -126,7 +126,11 @@ export default class ShadowOS extends Extension {
             this._modeBouton.add_child(this._modePastille);
             this._modeBouton.connect('button-press-event', () => {
                 try {
-                    Gio.Subprocess.new([`${this._modesDossier}/modes.py`], Gio.SubprocessFlags.NONE);
+                    // de préférence la page Modes du Centre Shadow, sinon l'appli Modes seule
+                    const centre = `${GLib.path_get_dirname(this._modesDossier)}/centre/centre.py`;
+                    const argv = GLib.file_test(centre, GLib.FileTest.IS_EXECUTABLE)
+                        ? [centre, '--page', 'modes'] : [`${this._modesDossier}/modes.py`];
+                    Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE);
                 } catch (_e) {}
                 return Clutter.EVENT_STOP;
             });
