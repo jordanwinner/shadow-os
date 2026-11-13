@@ -10,6 +10,10 @@ coupent et se relancent sans provoquer de recalcul. Les règles sont inertes
 tant que l'extension est coupée (ses éléments n'existent pas).
 
 Usage : fusionner-css.py appliquer | restaurer | etat
+L'îlot est du lot : sa feuille n'est donc plus rechargée à chaud quand on la
+modifie. Pour retravailler son style : « restaurer », modifier, puis
+« appliquer » (ou éditer stylesheet.css.fusionnee et relancer « appliquer »).
+
 « appliquer » est rejouable : à relancer après une régénération du thème
 (theme/eclipse.sh le fait) ou une mise à jour d'une des extensions.
 """
@@ -17,7 +21,7 @@ import os
 import re
 import sys
 
-EXTS = ['dash-to-dock@micxgx.gmail.com', 'tilingshell@ferrarodomenico.com',
+EXTS = ['dash-to-dock@micxgx.gmail.com', 'tilingshell@ferrarodomenico.com', 'dynamic-island-v2@jordan',
         'logomenu@aryan_k', 'rounded-window-corners@fxgn']
 DOSSIER = os.path.expanduser('~/.local/share/gnome-shell/extensions')
 THEME = os.path.expanduser('~/.themes/Shadow/gnome-shell/gnome-shell.css')

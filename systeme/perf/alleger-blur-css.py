@@ -23,7 +23,9 @@ EXT = os.path.expanduser('~/.local/share/gnome-shell/extensions/blur-my-shell@au
 CSS = os.path.join(EXT, 'stylesheet.css')
 ORIGINE = os.path.join(EXT, 'stylesheet.css.origine')
 MARQUE = '/* allégé par Shadow (alleger-blur-css.py) — original : stylesheet.css.origine */\n'
-INUTILES = re.compile(r'\.(bms-popup-(background|surface)-(light|transparent)'
+# Les menus de Shadow ont déjà un fond opaque à 96 % : le flou des popups y est invisible mais
+# ses ~400 règles coûtent cher. Shadow le désactive (popup/blur=false) et retire toute la famille.
+INUTILES = re.compile(r'\.(bms-popup-[\w-]+'
                       r'|overview-components-(light|transparent)|light-dash|dark-dash|light-panel)(?![\w-])')
 
 
@@ -49,12 +51,13 @@ def est_allege():
 
 cmd = sys.argv[1] if len(sys.argv) > 1 else 'etat'
 if cmd == 'appliquer':
-    if est_allege():
-        sys.exit('déjà allégée')
-    with open(CSS) as f:
+    # toujours repartir de l'original (rejouable après un changement de la liste ci-dessus)
+    source = ORIGINE if est_allege() and os.path.exists(ORIGINE) else CSS
+    with open(source) as f:
         texte = f.read()
+    if source == CSS:
+        shutil.copy2(CSS, ORIGINE)
     nouveau, gardes, retires = alleger(texte)
-    shutil.copy2(CSS, ORIGINE)
     with open(CSS, 'w') as f:
         f.write(nouveau)
     print(f'{retires} sélecteurs retirés, {gardes} gardés ({len(texte) // 1024} Ko -> {len(nouveau) // 1024} Ko)')
