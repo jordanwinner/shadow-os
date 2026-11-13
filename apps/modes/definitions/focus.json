@@ -1,0 +1,21 @@
+{
+  "id": "focus",
+  "ordre": 2,
+  "nom": "Focus",
+  "accroche": "Notifications coupées, bureau épuré pour travailler.",
+  "icone": "preferences-system-time",
+  "symbole": "view-reveal-symbolic",
+  "couleurs": [
+    "#2DD4BF",
+    "#4C8DFF"
+  ],
+  "apercu": "document",
+  "reglages": {
+    "fond": "mode-focus.png",
+    "accent": "blue",
+    "fenetres": "flottant",
+    "ne_pas_deranger": true,
+    "ilot_repos": "weather",
+    "hud": false
+  }
+}

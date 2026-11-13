@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Modes
+Comment=Changer l'ambiance du bureau : Pentest, Focus, Jeu, Nuit
+Exec=/home/jordan/Shadow/apps/modes/modes.py
+Icon=os.shadow.Modes
+Categories=Settings;DesktopSettings;
+Keywords=mode;pentest;focus;jeu;nuit;concentration;ambiance;profil;
+StartupNotify=true

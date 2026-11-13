@@ -1,0 +1,22 @@
+{
+  "id": "nuit",
+  "ordre": 4,
+  "nom": "Nuit",
+  "accroche": "Lumière chaude, écran calme, PC au frais.",
+  "icone": "weather-clear-night",
+  "symbole": "weather-clear-night-symbolic",
+  "couleurs": [
+    "#FF9A4D",
+    "#B8501B"
+  ],
+  "apercu": "repos",
+  "reglages": {
+    "fond": "mode-nuit.png",
+    "accent": "orange",
+    "ne_pas_deranger": true,
+    "lumiere_nocturne": true,
+    "ilot_theme": "oled",
+    "energie": "frais",
+    "hud": false
+  }
+}

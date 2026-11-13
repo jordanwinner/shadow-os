@@ -1,0 +1,14 @@
+{
+  "id": "quotidien",
+  "ordre": 0,
+  "nom": "Quotidien",
+  "accroche": "Ton bureau habituel, tel que tu l’as réglé.",
+  "icone": "shadow-os",
+  "symbole": "shadow-os-symbolic",
+  "couleurs": [
+    "#7C6CFF",
+    "#FF4D8D"
+  ],
+  "apercu": "bureau",
+  "reglages": {}
+}

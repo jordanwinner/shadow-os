@@ -1,0 +1,22 @@
+{
+  "id": "jeu",
+  "ordre": 3,
+  "nom": "Jeu",
+  "accroche": "Toute la puissance, aucune interruption.",
+  "icone": "input-gaming",
+  "symbole": "input-gaming-symbolic",
+  "couleurs": [
+    "#FF3D81",
+    "#FFB020"
+  ],
+  "apercu": "jeu",
+  "reglages": {
+    "fond": "mode-jeu.png",
+    "accent": "pink",
+    "fenetres": "flottant",
+    "ne_pas_deranger": true,
+    "lumiere_nocturne": false,
+    "energie": "performance",
+    "hud": false
+  }
+}

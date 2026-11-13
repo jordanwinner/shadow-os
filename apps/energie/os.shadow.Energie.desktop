@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Énergie
+Comment=Choisir le mode d'énergie : frais, équilibré ou performance
+Exec=/home/jordan/Shadow/apps/energie/energie.py
+Icon=os.shadow.Energie
+Categories=Settings;HardwareSettings;
+Keywords=énergie;batterie;turbo;performance;ventilateur;power;cpu;
+StartupNotify=true

@@ -35,7 +35,8 @@ sauver_origine(){
   } > "$ORIGINE"
 }
 
-notifier(){ # titre, corps
+notifier(){ # titre, corps (muet si SHADOW_MODE_SILENCE=1 : les Modes Shadow annoncent eux-mêmes)
+  [ "${SHADOW_MODE_SILENCE:-0}" = 1 ] && return 0
   command -v notify-send >/dev/null || return 0
   notify-send -a Shadow -i "$ICONE" -t 2200 -e \
     -h string:x-canonical-private-synchronous:shadow-mode "$1" "$2" 2>/dev/null || true
