@@ -140,6 +140,9 @@ Name=Shadow
 Comment=Shadow OS — palette Éclipse
 EOF
   ok "thème shell Shadow généré ($(wc -l < "$THEME_DIR/gnome-shell/gnome-shell.css") lignes)"
+  # les feuilles d'extensions fusionnées dans le thème (verrouillage rapide) doivent y être remises
+  local fusion; fusion="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../systeme/perf/fusionner-css.py"
+  if [ -x "$fusion" ] && "$fusion" etat | grep -q 'fusionnée\|stylesheet'; then "$fusion" appliquer >/dev/null && ok "feuilles d'extensions refusionnées"; fi
 }
 
 bloc_gtk(){ # fichier
