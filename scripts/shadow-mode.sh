@@ -1,39 +1,27 @@
 #!/usr/bin/env bash
 # shadow mode — bascule le bureau entre « flottant » (façon macOS) et « tuiles » (façon Omarchy).
 #   shadow mode [flottant|tuiles|bascule|etat|restaurer]
-# S'appuie sur Tiling Shell. Aucun sudo. Les réglages d'origine sont sauvegardés au premier
-# lancement dans ~/.local/state/shadow-os/ et `restaurer` les remet.
+#
+# Le rangement en tuiles est fait par l'extension Shadow elle-même (tuiles.js) :
+#   flottant : fenêtres libres ; Super+←/→ les cale sur une moitié d'écran, Super+↑ agrandit ;
+#   tuiles   : les fenêtres se rangent seules ; Super+flèches change de fenêtre,
+#              Super+Maj+flèches en échange deux.
+# Aucun sudo. `restaurer` remet les raccourcis d'origine de GNOME.
 set -euo pipefail
 
 ETAT_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/shadow-os"
 ETAT="$ETAT_DIR/mode"
-ORIGINE="$ETAT_DIR/mode-origine.txt"
-TS_EXT="$HOME/.local/share/gnome-shell/extensions/tilingshell@ferrarodomenico.com"
-TS=(gsettings --schemadir "$TS_EXT/schemas")
-TSS=org.gnome.shell.extensions.tilingshell
+EXT="$HOME/.local/share/gnome-shell/extensions/shadow-os@jordan"
+SO=(gsettings --schemadir "$EXT/schemas")
+SOS=org.gnome.shell.extensions.shadow-os
 WM=org.gnome.desktop.wm.keybindings
+MK=org.gnome.mutter.keybindings
 ICONE=shadow-os
 DIRS=(left right up down)
 Dirs=(Left Right Up Down)
 
 die(){ printf '\033[31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
-[ -d "$TS_EXT/schemas" ] || die "Tiling Shell introuvable ($TS_EXT)"
-
-# clés touchées, au format « schéma|clé »
-cles(){
-  for k in enable-autotiling enable-window-border; do echo "ts|$k"; done
-  for d in "${DIRS[@]}"; do echo "ts|focus-window-$d"; echo "ts|move-window-$d"; echo "wm|move-to-monitor-$d"; done
-}
-lire(){ case "$1" in ts) "${TS[@]}" get $TSS "$2";; wm) gsettings get $WM "$2";; esac; }
-ecrire(){ case "$1" in ts) "${TS[@]}" set $TSS "$2" "$3";; wm) gsettings set $WM "$2" "$3";; esac; }
-
-sauver_origine(){
-  [ -s "$ORIGINE" ] && return 0
-  mkdir -p "$ETAT_DIR"
-  { echo "# réglages avant le premier « shadow mode » — $(date '+%F %T')"
-    cles | while IFS='|' read -r s k; do printf '%s|%s|%s\n' "$s" "$k" "$(lire "$s" "$k")"; done
-  } > "$ORIGINE"
-}
+[ -d "$EXT/schemas" ] || die "extension Shadow introuvable ($EXT)"
 
 notifier(){ # titre, corps (muet si SHADOW_MODE_SILENCE=1 : les Modes Shadow annoncent eux-mêmes)
   [ "${SHADOW_MODE_SILENCE:-0}" = 1 ] && return 0
@@ -43,42 +31,46 @@ notifier(){ # titre, corps (muet si SHADOW_MODE_SILENCE=1 : les Modes Shadow ann
 }
 
 mode_flottant(){
-  sauver_origine
-  ecrire ts enable-autotiling false
-  ecrire ts enable-window-border false
+  "${SO[@]}" set $SOS tuiles false
+  gsettings set org.gnome.mutter edge-tiling true
+  gsettings set $MK toggle-tiled-left "['<Super>Left']"
+  gsettings set $MK toggle-tiled-right "['<Super>Right']"
+  gsettings set $WM maximize "['<Super>Up']"
+  gsettings set $WM unmaximize "['<Super>Down']"
   for i in 0 1 2 3; do
-    ecrire ts "focus-window-${DIRS[i]}" "['']"
-    ecrire ts "move-window-${DIRS[i]}" "['<Super>${Dirs[i]}']"
-    ecrire wm "move-to-monitor-${DIRS[i]}" "['<Super><Shift>${Dirs[i]}']"
+    gsettings set $WM "move-to-monitor-${DIRS[i]}" "['<Super><Shift>${Dirs[i]}']"
   done
-  echo flottant > "$ETAT"
-  notifier "Mode flottant" "Fenêtres libres · Super+flèches pour les ancrer"
+  mkdir -p "$ETAT_DIR"; echo flottant > "$ETAT"
+  notifier "Mode flottant" "Fenêtres libres · Super+flèches pour les caler ou les agrandir"
 }
 
 mode_tuiles(){
-  sauver_origine
-  ecrire ts enable-autotiling true
-  ecrire ts enable-window-border true
+  # les raccourcis de GNOME sur Super+flèches sont libérés pour le moteur de tuiles
+  gsettings set org.gnome.mutter edge-tiling false
+  gsettings set $MK toggle-tiled-left "@as []"
+  gsettings set $MK toggle-tiled-right "@as []"
+  gsettings set $WM maximize "@as []"
+  gsettings set $WM unmaximize "@as []"
   for i in 0 1 2 3; do
-    ecrire wm "move-to-monitor-${DIRS[i]}" "@as []"
-    ecrire ts "move-window-${DIRS[i]}" "['<Super><Shift>${Dirs[i]}']"
-    ecrire ts "focus-window-${DIRS[i]}" "['<Super>${Dirs[i]}']"
+    gsettings set $WM "move-to-monitor-${DIRS[i]}" "@as []"
   done
-  echo tuiles > "$ETAT"
-  notifier "Mode tuiles" "Rangement auto · Super+flèches : focus · Super+Maj+flèches : déplacer"
+  "${SO[@]}" set $SOS tuiles true
+  mkdir -p "$ETAT_DIR"; echo tuiles > "$ETAT"
+  notifier "Mode tuiles" "Rangement auto · Super+flèches : fenêtre voisine · Super+Maj+flèches : échanger"
 }
 
 mode_courant(){
-  if [ -s "$ETAT" ]; then cat "$ETAT"
-  elif [ "$(lire ts enable-autotiling)" = true ]; then echo tuiles
-  else echo flottant; fi
+  if [ "$("${SO[@]}" get $SOS tuiles 2>/dev/null)" = true ]; then echo tuiles; else echo flottant; fi
 }
 
 restaurer(){
-  [ -s "$ORIGINE" ] || die "aucune sauvegarde d'origine ($ORIGINE)"
-  grep -v '^#' "$ORIGINE" | while IFS='|' read -r s k v; do ecrire "$s" "$k" "$v"; done
+  "${SO[@]}" reset $SOS tuiles
+  gsettings reset org.gnome.mutter edge-tiling
+  gsettings reset $MK toggle-tiled-left; gsettings reset $MK toggle-tiled-right
+  gsettings reset $WM maximize; gsettings reset $WM unmaximize
+  for d in "${DIRS[@]}"; do gsettings reset $WM "move-to-monitor-$d"; done
   rm -f "$ETAT"
-  echo "Réglages d'origine restaurés."
+  echo "Raccourcis d'origine de GNOME restaurés."
 }
 
 case "${1:-bascule}" in

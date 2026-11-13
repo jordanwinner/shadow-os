@@ -5,5 +5,33 @@
       <default><![CDATA[['<Alt>space']]]></default>
       <summary>Ouvre la recherche (lanceur façon Spotlight)</summary>
     </key>
+    <key name="tuiles" type="b">
+      <default>false</default>
+      <summary>Range automatiquement les fenêtres en tuiles</summary>
+    </key>
+    <key name="tuiles-ecart" type="i">
+      <default>10</default>
+      <summary>Écart en pixels entre les tuiles et avec les bords</summary>
+    </key>
+    <key name="tuiles-part-principale" type="d">
+      <default>0.56</default>
+      <summary>Part de la largeur donnée à la fenêtre principale</summary>
+    </key>
+    <key name="tuiles-bordure" type="b">
+      <default>true</default>
+      <summary>Liseré Éclipse autour de la fenêtre active en mode tuiles</summary>
+    </key>
+    <key name="tuiles-focus-gauche" type="as"><default><![CDATA[['<Super>Left']]]></default><summary>Fenêtre à gauche</summary></key>
+    <key name="tuiles-focus-droite" type="as"><default><![CDATA[['<Super>Right']]]></default><summary>Fenêtre à droite</summary></key>
+    <key name="tuiles-focus-haut" type="as"><default><![CDATA[['<Super>Up']]]></default><summary>Fenêtre au-dessus</summary></key>
+    <key name="tuiles-focus-bas" type="as"><default><![CDATA[['<Super>Down']]]></default><summary>Fenêtre en dessous</summary></key>
+    <key name="tuiles-deplacer-gauche" type="as"><default><![CDATA[['<Super><Shift>Left']]]></default><summary>Échanger avec la fenêtre de gauche</summary></key>
+    <key name="tuiles-deplacer-droite" type="as"><default><![CDATA[['<Super><Shift>Right']]]></default><summary>Échanger avec la fenêtre de droite</summary></key>
+    <key name="tuiles-deplacer-haut" type="as"><default><![CDATA[['<Super><Shift>Up']]]></default><summary>Échanger avec la fenêtre du dessus</summary></key>
+    <key name="tuiles-deplacer-bas" type="as"><default><![CDATA[['<Super><Shift>Down']]]></default><summary>Échanger avec la fenêtre du dessous</summary></key>
+    <key name="espaces" type="b">
+      <default>true</default>
+      <summary>Indicateur des espaces de travail dans la barre</summary>
+    </key>
   </schema>
 </schemalist>

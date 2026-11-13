@@ -11,6 +11,8 @@ import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Espaces} from './espaces.js';
+import {Tuiles} from './tuiles.js';
 
 const ACCENT = '#7C6CFF';
 const SURVOL = '#8D7FFF';
@@ -37,6 +39,20 @@ export default class ShadowOS extends Extension {
                     Main.overview.focusSearch();
             });
 
+        // indicateur des espaces de travail et rangement en tuiles : faits ici pour ne plus
+        // dépendre de Space Bar ni de Tiling Shell (plus légers, rien à recharger au verrouillage)
+        try {
+            if (this._reglages.get_boolean('espaces'))
+                this._espaces = new Espaces();
+        } catch (e) {
+            console.error(`[shadow-os] espaces : ${e}`);
+        }
+        try {
+            this._tuiles = new Tuiles(this._reglages);
+        } catch (e) {
+            console.error(`[shadow-os] tuiles : ${e}`);
+        }
+
         this._suivis = new Map();
         this._menu = Main.panel.statusArea.quickSettings?.menu ?? null;
         if (!this._menu)
@@ -52,6 +68,9 @@ export default class ShadowOS extends Extension {
         this._retablirBarre();
         this._retirerIndicateurMode();
         Main.wm.removeKeybinding('lanceur');
+        try { this._tuiles?.destroy(); } catch (e) { console.error(`[shadow-os] tuiles : ${e}`); }
+        try { this._espaces?.destroy(); } catch (e) { console.error(`[shadow-os] espaces : ${e}`); }
+        this._tuiles = this._espaces = null;
         this._reglages = null;
         if (this._menu && this._ouvertId)
             this._menu.disconnect(this._ouvertId);

@@ -1,13 +1,13 @@
 {
   "uuid": "shadow-os@jordan",
   "name": "Shadow OS",
-  "description": "Intégration du bureau Shadow : accent Éclipse des réglages rapides, recherche Alt+Espace, barre du haut (horloge à droite, sans bouton Activités) et indicateur du mode actif.",
+  "description": "Intégration du bureau Shadow : accent Éclipse des réglages rapides, recherche Alt+Espace, barre du haut, indicateur de mode, espaces de travail et rangement des fenêtres en tuiles.",
   "shell-version": [
     "48",
     "49",
     "50"
   ],
-  "version": 3,
+  "version": 4,
   "url": "https://github.com/jordanwinner/shadow-desktop",
   "settings-schema": "org.gnome.shell.extensions.shadow-os"
 }

@@ -105,7 +105,7 @@ build(){
   background-gradient-start: rgba(44, 41, 72, 0.66);
   background-gradient-end: rgba(12, 12, 20, 0.66);
   border: 1px solid rgba(183, 169, 255, 0.22);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.10); }
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45); }
 #dashtodockContainer.bottom:ltr #dash .dash-background { border-radius: 26px; }
 #dashtodockContainer .dash-item-container .overview-tile .overview-icon { transition-duration: 160ms; border-radius: 16px; }
 #dashtodockContainer .dash-item-container .overview-tile:hover .overview-icon,
@@ -127,7 +127,7 @@ build(){
   background-gradient-end: rgba(12, 12, 20, 0.80);
   border: 1px solid rgba(183, 169, 255, 0.18);
   border-radius: 999px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   margin-top: 4px; margin-bottom: 4px;
   padding: 0 4px; }
 #panel #panelLeft { margin-left: 8px; }
