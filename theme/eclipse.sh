@@ -97,6 +97,54 @@ build(){
 #dashtodockContainer .show-apps:checked .overview-icon { background-color: rgba(124, 108, 255, 0.30); border-radius: 14px; }
 #dashtodockContainer .dash-separator { background-color: rgba(236, 235, 250, 0.14); width: 1px; margin: 6px 4px; }
 
+/* Dock : verre plus net (dégradé, liseré lumineux, reflet haut) */
+#dashtodockContainer #dash .dash-background {
+  border-radius: 26px;
+  background-color: rgba(16, 16, 26, 0.62);
+  background-gradient-direction: vertical;
+  background-gradient-start: rgba(44, 41, 72, 0.66);
+  background-gradient-end: rgba(12, 12, 20, 0.66);
+  border: 1px solid rgba(183, 169, 255, 0.22);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.10); }
+#dashtodockContainer.bottom:ltr #dash .dash-background { border-radius: 26px; }
+#dashtodockContainer .dash-item-container .overview-tile .overview-icon { transition-duration: 160ms; border-radius: 16px; }
+#dashtodockContainer .dash-item-container .overview-tile:hover .overview-icon,
+#dashtodockContainer .show-apps:hover .overview-icon {
+  background-color: rgba(183, 169, 255, 0.16); border-radius: 16px; }
+#dashtodockContainer .dash-item-container .overview-tile:active .overview-icon { background-color: rgba(124, 108, 255, 0.34); }
+
+/* ===== Barre du haut en pilules flottantes =====
+   La barre elle-même est transparente ; les groupes gauche et droit flottent chacun dans
+   une capsule de verre, à la même hauteur que l'îlot central. */
+#panel, #panel:overview, #panel.transparent-panel, #panel.dark-panel {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  height: 42px; }
+#panel #panelLeft, #panel #panelRight {
+  background-color: rgba(12, 12, 20, 0.78);
+  background-gradient-direction: vertical;
+  background-gradient-start: rgba(34, 32, 56, 0.80);
+  background-gradient-end: rgba(12, 12, 20, 0.80);
+  border: 1px solid rgba(183, 169, 255, 0.18);
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  margin-top: 4px; margin-bottom: 4px;
+  padding: 0 4px; }
+#panel #panelLeft { margin-left: 8px; }
+#panel #panelRight { margin-right: 8px; }
+#panel .panel-button { border-radius: 999px; margin: 3px 1px; -natural-hpadding: 9px; -minimum-hpadding: 6px; }
+#panel .panel-button:hover { background-color: rgba(183, 169, 255, 0.14); box-shadow: none; }
+#panel .panel-button:active, #panel .panel-button:checked, #panel .panel-button:focus {
+  background-color: rgba(124, 108, 255, 0.30); box-shadow: none; }
+/* l'horloge : petite pastille Éclipse en tête de la capsule de droite */
+#panel #panelRight .clock {
+  background-color: rgba(124, 108, 255, 0.20);
+  border-radius: 999px;
+  padding: 0 12px; margin: 0 1px;
+  color: #ECEBFA; font-weight: 600; font-feature-settings: "tnum"; }
+#panel #panelRight .clock-display:hover .clock { background-color: rgba(124, 108, 255, 0.32); }
+#panel.unlock-screen #panelLeft, #panel.login-screen #panelLeft { background-color: transparent; border-color: transparent; box-shadow: none; }
+
 /* Alt+Tab, sélecteur d'espaces, bulles volume/luminosité : verre Éclipse */
 .switcher-list, .workspace-switcher, .osd-window, .resize-popup {
   background-color: rgba(14, 14, 22, 0.90);
