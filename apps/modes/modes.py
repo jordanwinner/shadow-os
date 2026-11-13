@@ -474,10 +474,12 @@ class Carte(Gtk.ToggleButton):
         self.sous.set_label('Actif' if actif else self._repos)
 
 
-class Fenetre(Adw.ApplicationWindow):
-    def __init__(self, app):
-        super().__init__(application=app, title='Modes')
-        self.set_resizable(False)                           # taille naturelle : aperçu 16:9 fixe
+class PanneauModes(Gtk.Box):
+    """Tout le contenu de l'appli Modes, réutilisable tel quel dans le Centre Shadow."""
+
+    def __init__(self, toast):
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=32)
+        self._toast = toast                                 # fonction(Adw.Toast) de la fenêtre hôte
         self._en_cours = False
         self._ignore = False
         etat = moteur.etat_complet()
@@ -486,13 +488,7 @@ class Fenetre(Adw.ApplicationWindow):
         self.actif = etat['actuel']
         self.choisi = self.actif
 
-        self.toasts = Adw.ToastOverlay()
-        vue = Adw.ToolbarView()
-        entete = Adw.HeaderBar()
-        entete.set_show_title(False)
-        vue.add_top_bar(entete)
-
-        racine = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=32)
+        racine = self
         racine.set_margin_start(36)
         racine.set_margin_end(32)
         racine.set_margin_bottom(32)
@@ -616,9 +612,6 @@ class Fenetre(Adw.ApplicationWindow):
         droite.append(ligne)
         racine.append(droite)
 
-        vue.set_content(racine)
-        self.toasts.set_child(vue)
-        self.set_content(self.toasts)
 
         # suit les changements faits ailleurs (commande shadow-modes, raccourci…)
         os.makedirs(moteur.ETAT_DIR, exist_ok=True)
@@ -626,7 +619,6 @@ class Fenetre(Adw.ApplicationWindow):
         self._moniteur.connect('changed', lambda *_a: self._relire())
 
         self._choisir(self.actif)
-        self.set_focus(self.cartes[self.actif])
 
     # --- sélection ---------------------------------------------------------------
     def _mode(self, ident):
@@ -685,7 +677,7 @@ class Fenetre(Adw.ApplicationWindow):
             proc = Gio.Subprocess.new([MOTEUR, 'auto', 'on' if voulu else 'off'],
                                       Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE)
         except GLib.Error as e:
-            self.toasts.add_toast(Adw.Toast(title=e.message))
+            self._toast(Adw.Toast(title=e.message))
             return
 
         def fini(p, res):
@@ -697,7 +689,7 @@ class Fenetre(Adw.ApplicationWindow):
             texte = ('Nuit automatique activée' if voulu else 'Nuit automatique désactivée') if ok else 'Échec du réglage de la routine'
             toast = Adw.Toast(title=texte)
             toast.set_timeout(2)
-            self.toasts.add_toast(toast)
+            self._toast(toast)
             self._relire()
         proc.communicate_utf8_async(None, None, fini)
 
@@ -735,13 +727,38 @@ class Fenetre(Adw.ApplicationWindow):
             texte = (message.splitlines()[-1] if message else 'Échec du changement de mode')
         toast = Adw.Toast(title=texte)
         toast.set_timeout(3)
-        self.toasts.add_toast(toast)
+        self._toast(toast)
 
     def _relire(self):
         if self._en_cours:
             return
         self.actif = moteur.actuel()
         self._boutons()
+
+
+def charger_css(affichage):
+    """Styles et icônes de Modes ; appelé par l'appli comme par le Centre Shadow."""
+    Gtk.IconTheme.get_for_display(affichage).add_search_path(os.path.join(ICI, 'icones'))
+    css = Gtk.CssProvider()
+    css.load_from_string(CSS + css_des_modes(moteur.modes()))
+    # au-dessus du thème GTK de l'utilisateur, qui recolore sinon « button:checked »
+    Gtk.StyleContext.add_provider_for_display(affichage, css, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
+
+
+class Fenetre(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title='Modes')
+        self.set_resizable(False)                           # taille naturelle : aperçu 16:9 fixe
+        toasts = Adw.ToastOverlay()
+        vue = Adw.ToolbarView()
+        entete = Adw.HeaderBar()
+        entete.set_show_title(False)
+        vue.add_top_bar(entete)
+        self.panneau = PanneauModes(toasts.add_toast)
+        vue.set_content(self.panneau)
+        toasts.set_child(vue)
+        self.set_content(toasts)
+        self.set_focus(self.panneau.cartes[self.panneau.actif])
 
 
 class App(Adw.Application):
@@ -751,12 +768,7 @@ class App(Adw.Application):
     def do_startup(self):
         Adw.Application.do_startup(self)
         Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.PREFER_DARK)
-        affichage = Gdk.Display.get_default()
-        Gtk.IconTheme.get_for_display(affichage).add_search_path(os.path.join(ICI, 'icones'))
-        css = Gtk.CssProvider()
-        css.load_from_string(CSS + css_des_modes(moteur.modes()))
-        # au-dessus du thème GTK de l'utilisateur, qui recolore sinon « button:checked »
-        Gtk.StyleContext.add_provider_for_display(affichage, css, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
+        charger_css(Gdk.Display.get_default())
         quitter = Gio.SimpleAction.new('quitter', None)
         quitter.connect('activate', lambda *_a: self.quit())
         self.add_action(quitter)

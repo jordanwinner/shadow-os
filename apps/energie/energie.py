@@ -233,6 +233,7 @@ class Carte(Gtk.ToggleButton):
         puce = Gtk.Box()
         puce.add_css_class('en-puce')
         puce.set_valign(Gtk.Align.CENTER)
+        puce.set_hexpand(False)                             # sinon l'icône (extensible) étire la pastille
         img = Gtk.Image.new_from_icon_name(icone)
         img.set_pixel_size(22)
         img.set_hexpand(True)
@@ -288,23 +289,18 @@ class Tuile(Gtk.Box):
             self.sous.set_label(sous)
 
 
-class Fenetre(Adw.ApplicationWindow):
-    def __init__(self, app):
-        super().__init__(application=app, title='Énergie')
-        self.set_default_size(480, -1)
-        self.set_resizable(False)
+class PanneauEnergie(Gtk.Box):
+    """Tout le contenu de l'appli Énergie, réutilisable tel quel dans le Centre Shadow."""
+
+    def __init__(self, toast):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self._toast = toast                                 # fonction(Adw.Toast) de la fenêtre hôte
         self._en_cours = False
         self._ignore_signal = False
         self._mode_affiche = None
         self._minuteur = 0
 
-        self.toasts = Adw.ToastOverlay()
-        vue = Adw.ToolbarView()
-        entete = Adw.HeaderBar()
-        entete.set_show_title(False)
-        vue.add_top_bar(entete)
-
-        boite = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        boite = self
         boite.set_margin_start(32)
         boite.set_margin_end(32)
         boite.set_margin_bottom(28)
@@ -375,9 +371,6 @@ class Fenetre(Adw.ApplicationWindow):
         note.set_margin_top(18)
         boite.append(note)
 
-        vue.set_content(boite)
-        self.toasts.set_child(vue)
-        self.set_content(self.toasts)
 
         # Suit les changements faits ailleurs (commande shadow-energie, autre fenêtre)
         dossier = Gio.File.new_for_path(os.path.dirname(ETAT))
@@ -390,7 +383,6 @@ class Fenetre(Adw.ApplicationWindow):
 
         self._rafraichir()
         self._mesurer()
-        self.set_focus(self.cartes[mode_actuel()])
 
     # --- mesures en direct ---------------------------------------------------
     def _demarrer_mesures(self, *_a):
@@ -472,7 +464,34 @@ class Fenetre(Adw.ApplicationWindow):
             msg = 'Échec : ' + (erreur.splitlines()[-1] if erreur else 'erreur inconnue')
         toast = Adw.Toast(title=msg)
         toast.set_timeout(2)
-        self.toasts.add_toast(toast)
+        self._toast(toast)
+
+
+def charger_css(affichage):
+    """Styles et icônes d'Énergie ; appelé par l'appli comme par le Centre Shadow."""
+    Gtk.IconTheme.get_for_display(affichage).add_search_path(os.path.join(ICI, 'icones'))
+    css = Gtk.CssProvider()
+    css.load_from_string(CSS)
+    # Priorité au-dessus du thème GTK de l'utilisateur (~/.config/gtk-4.0/gtk.css),
+    # qui recolore sinon « button:checked ». Les règles ne visent que les classes .en-*.
+    Gtk.StyleContext.add_provider_for_display(affichage, css, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
+
+
+class Fenetre(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title='Énergie')
+        self.set_default_size(480, -1)
+        self.set_resizable(False)
+        toasts = Adw.ToastOverlay()
+        vue = Adw.ToolbarView()
+        entete = Adw.HeaderBar()
+        entete.set_show_title(False)
+        vue.add_top_bar(entete)
+        self.panneau = PanneauEnergie(toasts.add_toast)
+        vue.set_content(self.panneau)
+        toasts.set_child(vue)
+        self.set_content(toasts)
+        self.set_focus(self.panneau.cartes[mode_actuel()])
 
 
 class App(Adw.Application):
@@ -482,15 +501,7 @@ class App(Adw.Application):
     def do_startup(self):
         Adw.Application.do_startup(self)
         Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.PREFER_DARK)
-        affichage = Gdk.Display.get_default()
-        theme = Gtk.IconTheme.get_for_display(affichage)
-        theme.add_search_path(os.path.join(ICI, 'icones'))
-        css = Gtk.CssProvider()
-        css.load_from_string(CSS)
-        # Priorité au-dessus du thème GTK de l'utilisateur (~/.config/gtk-4.0/gtk.css),
-        # qui recolore sinon « button:checked ». Les règles ne visent que les classes .en-*.
-        Gtk.StyleContext.add_provider_for_display(
-            affichage, css, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
+        charger_css(Gdk.Display.get_default())
         quitter = Gio.SimpleAction.new('quitter', None)
         quitter.connect('activate', lambda *a: self.quit())
         self.add_action(quitter)

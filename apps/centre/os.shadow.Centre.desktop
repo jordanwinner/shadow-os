@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Shadow
+GenericName=Centre Shadow
+Comment=Tous les réglages de Shadow : modes, énergie, apparence, arsenal, système
+Exec=/home/jordan/Shadow/apps/centre/centre.py
+Icon=shadow-os
+Categories=Settings;
+Keywords=shadow;centre;réglages;paramètres;modes;énergie;arsenal;kali;îlot;fond;
+StartupNotify=true
