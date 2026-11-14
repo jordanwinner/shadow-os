@@ -11,6 +11,7 @@
 #   ./installer.sh --avec-systeme  + GRUB/Plymouth/écran de connexion (sudo)
 #   ./installer.sh --avec-arsenal  + box Kali (distrobox, long)
 #   ./installer.sh --avec-desktop  + îlot/conky/fonds (shadow-desktop)
+#   ./installer.sh --avec-shell    + shsh, le shell de Shadow (compile, sudo)
 #   ./installer.sh --tout          tout ce qui précède
 #   ./installer.sh --seulement theme,applis   un ou plusieurs modules précis
 #   ./installer.sh --sans extensions           en retirer
@@ -22,6 +23,7 @@ set -euo pipefail
 
 RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DESKTOP_REPO="${SHADOW_DESKTOP_REPO:-$HOME/Dev/shadow-desktop}"
+SHSH_REPO="${SHADOW_SHSH_REPO:-$HOME/Dev/shsh}"
 BIN="$HOME/.local/bin"
 EXT_BASE="$HOME/.local/share/gnome-shell/extensions"
 ETAT="${XDG_STATE_HOME:-$HOME/.local/state}/shadow-os"
@@ -211,6 +213,17 @@ mod_arsenal(){
     avert "arsenal/shadow-arsenal.sh introuvable dans $DESKTOP_REPO"
   fi
 }
+mod_shell(){
+  titre "shsh, le shell de Shadow — compilation + sudo"
+  if [ ! -x "$SHSH_REPO/outils/installer.sh" ]; then
+    avert "dépôt shsh introuvable dans $SHSH_REPO (variable SHADOW_SHSH_REPO)"
+  elif ! command -v cargo >/dev/null 2>&1; then
+    avert "cargo absent : installe Rust (rustup) puis relance --seulement shell"
+  else
+    faire "'$SHSH_REPO/outils/installer.sh'"
+    ok "shsh installé — pour en faire ton shell de connexion : chsh -s /usr/local/bin/shsh"
+  fi
+}
 mod_systeme(){
   titre "Système (GRUB, Plymouth, écran de connexion) — sudo"
   if [ -f "$RACINE/systeme/installer-systeme.sh" ]; then
@@ -238,6 +251,7 @@ declare -A DESC=(
   [scripts]="scripts et commandes (shadow, shadow-mode)"
   [terminal]="fastfetch"
   [apps]="VS Code, Bienvenue"
+  [shell]="shsh, le shell de Shadow (compile, sudo)"
   [arsenal]="box Kali (long)"
   [systeme]="GRUB/Plymouth/login (sudo)"
   [desktop]="îlot, conky, fonds (shadow-desktop)"
@@ -246,19 +260,20 @@ declare -A DESC=(
 usage(){ sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//; s/^#//'; }
 lister(){
   titre "Modules"
-  for m in "${MODULES_UTILISATEUR[@]}" arsenal systeme desktop; do
+  for m in "${MODULES_UTILISATEUR[@]}" shell arsenal systeme desktop; do
     printf '  %s%-11s%s %s\n' "$C_OK" "$m" "$C_RST" "${DESC[$m]:-}"
   done
 }
 
 main(){
-  local avec_systeme=0 avec_arsenal=0 avec_desktop=0 tout=0
+  local avec_systeme=0 avec_arsenal=0 avec_desktop=0 avec_shell=0 tout=0
   local seulement="" sans=""
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --avec-systeme) avec_systeme=1 ;;
       --avec-arsenal) avec_arsenal=1 ;;
       --avec-desktop) avec_desktop=1 ;;
+      --avec-shell) avec_shell=1 ;;
       --tout) tout=1 ;;
       --seulement) seulement="$2"; shift ;;
       --seulement=*) seulement="${1#*=}" ;;
@@ -280,7 +295,8 @@ main(){
     IFS=',' read -r -a liste <<< "$seulement"
   else
     liste=("${MODULES_UTILISATEUR[@]}")
-    [ "$tout" = 1 ] && { avec_systeme=1; avec_arsenal=1; avec_desktop=1; }
+    [ "$tout" = 1 ] && { avec_systeme=1; avec_arsenal=1; avec_desktop=1; avec_shell=1; }
+    [ "$avec_shell" = 1 ] && liste+=(shell)
     [ "$avec_desktop" = 1 ] && liste+=(desktop)
     [ "$avec_arsenal" = 1 ] && liste+=(arsenal)
     [ "$avec_systeme" = 1 ] && liste+=(systeme)   # système en dernier
@@ -307,6 +323,7 @@ main(){
       scripts) mod_scripts ;;
       terminal) mod_terminal ;;
       apps) mod_apps ;;
+      shell) mod_shell ;;
       arsenal) mod_arsenal ;;
       systeme) mod_systeme ;;
       desktop) mod_desktop ;;

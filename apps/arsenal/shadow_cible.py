@@ -115,8 +115,9 @@ def main(argv):
             print(('Ligne ajoutée à : ' + ', '.join('~/' + a for a in ajoutes)) if ajoutes else 'Déjà en place, rien à faire')
         else:
             faits = shells_branches()
-            print('Pour que tes terminaux reçoivent $CIBLE, $TARGET et $MISSION, ajoute cette ligne\n'
-                  'à la fin de ~/.bashrc et de ~/.zshrc (ou lance « shadow-cible terminaux installer ») :\n\n'
+            print('shsh, le shell de Shadow, reçoit déjà $CIBLE, $TARGET et $MISSION tout seul.\n'
+                  'Pour bash et zsh, ajoute cette ligne à la fin de ~/.bashrc et de ~/.zshrc\n'
+                  '(ou lance « shadow-cible terminaux installer ») :\n\n'
                   f'  {LIGNE}\n\n'
                   + ('Déjà en place dans : ' + ', '.join('~/' + f for f in faits) if faits else 'Pas encore en place.'))
     elif cmd in ('fin', 'stop', 'off'):

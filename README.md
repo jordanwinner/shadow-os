@@ -40,7 +40,8 @@ Pour (ré)appliquer Shadow sur une machine Ubuntu/Debian + GNOME :
 
 ```bash
 ./installer.sh              # modules utilisateur (extensions, thème, grille, scripts, terminal, apps)
-./installer.sh --tout       # + système (GRUB/Plymouth/login), arsenal Kali, bureau shadow-desktop
+./installer.sh --avec-shell # + shsh, le shell de Shadow (dépôt ~/Dev/shsh : mission et mode dans le prompt)
+./installer.sh --tout       # + shell, système (GRUB/Plymouth/login), arsenal Kali, bureau shadow-desktop
 ./installer.sh --simuler --tout   # montre le plan sans rien modifier
 ./installer.sh --liste      # liste les modules
 ```
@@ -110,8 +111,6 @@ Sauvegardes : `~/.local/state/shadow-os/`, `~/.config/backup-theme/fond-avant-ec
 
 - GNOME 50 impose l'accent système aux tuiles des réglages rapides (aucun CSS n'y peut rien) :
   corrigé par l'extension `shadow-os@jordan`, active après reconnexion.
-- En mode tuiles, une appli qui se rouvre maximisée (kitty, éditeur de texte) n'est
-  pas rangée : Tiling Shell ne range que les fenêtres non maximisées.
 - `shadow theme apply` (ancien shadow-desktop) remettrait Tokyonight : utiliser `eclipse.sh`.
 
 Nom de paquet prévu : `shadow-os-*` (le paquet Debian `shadow` existe déjà :
