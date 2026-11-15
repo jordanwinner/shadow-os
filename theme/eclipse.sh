@@ -163,7 +163,7 @@ build(){
 .ws-switcher-indicator:active, .workspace-switcher .ws-switcher-active-up, .workspace-switcher .ws-switcher-active-down {
   background-color: #7C6CFF; }
 
-/* Écran de verrouillage Shadow : le croissant Éclipse, l'heure fine en très grand (façon iOS) */
+/* Écran de verrouillage Shadow : l'heure fine en très grand (façon iOS), verre Éclipse */
 .unlock-dialog-clock {
   color: #ECEBFA;
   spacing: 4px; }
