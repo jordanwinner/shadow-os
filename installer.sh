@@ -162,6 +162,9 @@ mod_scripts(){
   faire "ln -sfn '$RACINE/scripts/shadow-mode.sh' '$BIN/shadow-mode'"
   faire "chmod +x '$RACINE/scripts/shadow-mode.sh'"
   ok "shadow-mode lié dans ~/.local/bin"
+  faire "ln -sfn '$RACINE/scripts/shadow-maj.sh' '$BIN/shadow-maj'"
+  faire "chmod +x '$RACINE/scripts/shadow-maj.sh'"
+  ok "shadow-maj lié dans ~/.local/bin"
   if [ -f "$DESKTOP_REPO/bin/shadow" ]; then
     faire "ln -sfn '$DESKTOP_REPO/bin/shadow' '$BIN/shadow'"
     ok "commande shadow liée (depuis shadow-desktop)"
@@ -248,7 +251,7 @@ declare -A DESC=(
   [extensions]="extensions GNOME (EGO + locales)"
   [theme]="thème Éclipse + icônes"
   [applis]="grille d'applications"
-  [scripts]="scripts et commandes (shadow, shadow-mode)"
+  [scripts]="scripts et commandes (shadow, shadow-mode, shadow-maj)"
   [terminal]="fastfetch"
   [apps]="VS Code, Bienvenue"
   [shell]="shsh, le shell de Shadow (compile, sudo)"
