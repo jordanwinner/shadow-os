@@ -106,7 +106,16 @@ compter(){
 }
 
 ATTENTE="$ETAT/maj-attente"        # lu par l'îlot : JSON, absent quand tout est à jour
-EN_COURS="$ETAT/maj-en-cours"      # présent pendant « shadow maj »
+EN_COURS="$ETAT/maj-en-cours"      # présent pendant « shadow maj » : « PID date-ISO »
+VERROU="$ETAT/maj.lock"            # un seul « shadow maj » à la fois
+
+# « en cours » orphelin (PC éteint, processus tué : le trap n'a pas tourné) → on le retire
+en_cours_vivant(){
+  [ -f "$EN_COURS" ] || return 1
+  local pid; read -r pid _ < "$EN_COURS" 2>/dev/null
+  if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then return 0; fi
+  rm -f "$EN_COURS"; return 1
+}
 ecrire_attente(){                  # $1 = 1 pour prévenir par une notification si le nombre a augmenté
   mkdir -p "$ETAT"
   local avant=0
@@ -114,8 +123,8 @@ ecrire_attente(){                  # $1 = 1 pour prévenir par une notification 
   if [ "$N_TOTAL" -eq 0 ]; then rm -f "$ATTENTE"; return 0; fi
   printf '{"total": %d, "apt": %d, "snap": %d, "flatpak": %d, "extensions": %d, "shsh": %d, "redemarrage": %s, "date": "%s"}\n' \
     "$N_TOTAL" "$N_APT" "$N_SNAP" "$N_FLATPAK" "$N_EXT" "$shsh_a_jour" \
-    "$([ -f /var/run/reboot-required ] && echo true || echo false)" "$(date -Iseconds)" > "$ATTENTE.tmp" \
-    && mv -f "$ATTENTE.tmp" "$ATTENTE"
+    "$([ -f /var/run/reboot-required ] && echo true || echo false)" "$(date -Iseconds)" > "$ATTENTE.$$.tmp" \
+    && mv -f "$ATTENTE.$$.tmp" "$ATTENTE"
   if [ "${1:-0}" = 1 ] && [ "$N_TOTAL" -gt "$avant" ]; then
     notify-send -a Shadow -i shadow-os "$N_TOTAL mise(s) à jour disponible(s)" \
       "Touche l'îlot pour tout mettre à jour (shadow maj)" 2>/dev/null || true
@@ -145,7 +154,10 @@ fi
 
 if [ "$mode" = veille ]; then
   # un « shadow maj » en cours s'occupe déjà de tout
-  [ -f "$EN_COURS" ] && exit 0
+  # un « shadow maj » en cours tient le verrou : on attend qu'il ait fini (10 min au plus)
+  exec 9>"$VERROU"
+  flock -w 600 9 || exit 0
+  en_cours_vivant && exit 0
   compter
   ecrire_attente 1
   exit 0
@@ -153,7 +165,7 @@ fi
 
 if [ "$mode" = fenetre ]; then
   # banc d'essai : on prouve que le clic arrive ici, sans rien lancer
-  if [ -n "${SHADOW_MAJ_ESSAI:-}" ]; then date -Iseconds > "$ETAT/maj-fenetre-essai"; exit 0; fi
+  if [ -n "${SHADOW_MAJ_ESSAI:-}" ]; then date -Iseconds >> "$ETAT/maj-fenetre-essai"; exit 0; fi
   # terminal de l'utilisateur, sinon le premier trouvé ; la fenêtre reste ouverte pour lire le bilan
   # chemin absolu : le PATH hérité de GNOME Shell ne contient pas forcément ~/.local/bin
   cmd=(bash -c '"$0"; echo; read -rp "Entrée pour fermer… " _' "${SHADOW_MAJ_CMD:-$HOME/.local/bin/shadow-maj}")
@@ -197,7 +209,12 @@ fi
 
 mkdir -p "$ETAT"
 # l'îlot affiche « Mise à jour… » tant que ce fichier existe
-date -Iseconds > "$EN_COURS"
+exec 9>"$VERROU"
+if ! flock -n 9; then
+  printf '%s◐ Une mise à jour de Shadow est déjà en cours.%s\n' "$V$B" "$Z"
+  exit 1
+fi
+printf '%s %s\n' "$$" "$(date -Iseconds)" > "$EN_COURS"
 trap 'rm -f "$EN_COURS"' EXIT
 exec > >(tee -a "$JOURNAL") 2>&1
 printf '\n===== shadow maj · %s =====\n' "$(date '+%F %T')"
@@ -292,8 +309,10 @@ if veut arsenal; then
 fi
 
 # L'îlot se recalcule sur tout ce qui reste, en arrière-plan pour ne pas retarder le bilan
-( choisies=("${ETAPES[@]}"); ext_a_jour=(); shsh_a_jour=0; compter; ecrire_attente 0 ) >/dev/null 2>&1 &
-disown 2>/dev/null || true
+# L'ancien compte n'a plus de sens : on l'efface, puis une veille détachée du terminal
+# (qui peut être fermé tout de suite) recompte ce qui reste, une fois ce script terminé.
+rm -f "$ATTENTE"
+setsid -f bash -c 'exec "$0" veille' "$HOME/.local/bin/shadow-maj" </dev/null >/dev/null 2>&1 9>&- || true
 
 # Bilan
 titre "Bilan"

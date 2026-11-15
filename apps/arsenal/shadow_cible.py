@@ -109,7 +109,8 @@ def terminer():
 
 
 LIGNE_JOURNAL = re.compile(r'^- (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) · (✔|✘ -?\d+) · ([^·]+) · (`+) ?(.*?) ?\4 — (`+) ?(.*?) ?\6'
-                           r'(?: · preuve : \[(preuves/[^\]/]+)\]\(preuves/[^)/]+\))?$')
+                           r'((?: · preuve : \[preuves/[^\]/]+\]\(preuves/[^)/]+\))*)$')
+PREUVE_LIEN = re.compile(r' · preuve : \[(preuves/[^\]/]+)\]')
 PREUVE_LIGNES = 60                       # extrait de chaque preuve dans le rapport
 PORT_NMAP = re.compile(r'^(\d+)/(tcp|udp)\s+open\s+(\S+)\s*(.*)$')
 
@@ -160,7 +161,8 @@ def rapport(nom=None, sortie=None):
                 m = LIGNE_JOURNAL.match(ligne.rstrip('\n'))
                 if m:
                     entrees.append({'quand': m.group(1), 'code': m.group(2), 'duree': m.group(3).strip(),
-                                    'dossier': m.group(5), 'commande': m.group(7), 'preuve': m.group(8)})
+                                    'dossier': m.group(5), 'commande': m.group(7),
+                                    'preuves': PREUVE_LIEN.findall(m.group(8) or '')})
     except OSError:
         pass
     echecs = sum(1 for e in entrees if e['code'] != '✔')
@@ -205,7 +207,7 @@ def rapport(nom=None, sortie=None):
          f'| Cible | `{_cellule(adresse)}` |',
          f'| Période | {debut} → {fin} |',
          f'| Commandes notées | {len(entrees)} (dont {echecs} en échec) |',
-         f'| Preuves gardées | {sum(1 for e in entrees if e["preuve"])} |',
+         f'| Preuves gardées | {sum(len(e["preuves"]) for e in entrees)} |',
          f'| Ports ouverts | {len(ports)} |',
          f'| Fichiers de butin | {len(butin)} |', '']
     o += ['## Ports et services', '']
@@ -219,24 +221,29 @@ def rapport(nom=None, sortie=None):
     if entrees:
         o += ['| Heure | Résultat | Durée | Commande |', '|---|---|---|---|']
         for i, e in enumerate(entrees):
-            lien = f' · [preuve](#preuve-{i})' if e['preuve'] else ''
+            lien = ''.join(f' · [preuve](#preuve-{i}-{k})' for k in range(len(e['preuves'])))
             o.append(f'| {e["quand"]} | {e["code"]} | {e["duree"]} | {_code(e["commande"])}{lien} |')
     else:
         o.append('Aucune commande notée : le journal est tenu par shsh pendant une mission (`journal mission`).')
     # Preuves : sortie gardée par « preuve COMMANDE » dans shsh, extrait sous chaque commande
-    preuves = [(i, e) for i, e in enumerate(entrees) if e['preuve']]
+    preuves = [(i, k, e, p) for i, e in enumerate(entrees) for k, p in enumerate(e['preuves'])]
     if preuves:
         o += ['', '## Preuves', '']
-        for i, e in preuves:
-            chemin = os.path.join(dossier, e['preuve'])
-            try:
-                with open(chemin, errors='replace') as f:
-                    texte = f.read()
-            except OSError:
-                texte = None
-            titre = re.sub(r'^preuve\s+', '', e['commande'])
-            o += [f'<a id="preuve-{i}"></a>', f'### {_code(titre)}', '',
-                  f'{e["quand"]} · {e["code"]} · {e["duree"]} · fichier complet : [{e["preuve"]}]({e["preuve"]})', '']
+        for i, k, e, p in preuves:
+            chemin = os.path.join(dossier, p)
+            texte = None
+            # nom borné à preuves/<fichier> par la regex ; liens symboliques et noms piégés refusés
+            if '\0' not in p and os.path.basename(p) not in ('.', '..') and not os.path.islink(chemin):
+                try:
+                    with open(chemin, errors='replace') as f:
+                        texte = f.read()
+                except (OSError, ValueError):
+                    texte = None
+            # titre : la commande lue dans l'en-tête de la preuve (fiable même pour « cd x && preuve … »)
+            titre = next((l[len('# Preuve — '):] for l in (texte or '').split('\n')[:1] if l.startswith('# Preuve — ')),
+                         re.sub(r'^preuve\s+', '', e['commande']))
+            o += [f'<a id="preuve-{i}-{k}"></a>', f'### {_code(titre)}', '',
+                  f'{e["quand"]} · {e["code"]} · {e["duree"]} · fichier complet : [{p}]({p})', '']
             if texte is None:
                 o += ['*Fichier de preuve introuvable.*', '']
                 continue
