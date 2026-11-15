@@ -104,17 +104,21 @@ def actives_gsettings():
 
 
 def reference():
-    """Extensions qui doivent être actives. Créée à la première visite à partir de l'état du moment."""
-    ref = lire_json(CONFIG, {}).get('extensions')
-    if ref is None and gs('org.gnome.shell', 'disable-user-extensions') == 'false':
-        ref = sorted(actives_gsettings())
-        photo(ref)
-    return ref or []
+    """Extensions qui doivent être actives, ou None tant qu'aucune photo n'a été prise
+    (« shadow docteur photo », fait par l'installateur). Jamais créée en douce : une panne
+    en cours ne doit pas devenir l'état de référence."""
+    conf = lire_json(CONFIG, {})
+    ref = conf.get('extensions') if isinstance(conf, dict) else None
+    if not isinstance(ref, list) or not all(isinstance(u, str) for u in ref):
+        return None
+    return ref
 
 
 def photo(liste=None):
     liste = sorted(liste if liste is not None else actives_gsettings())
     conf = lire_json(CONFIG, {})
+    if not isinstance(conf, dict):
+        conf = {}
     conf['extensions'] = liste
     ecrire_json(CONFIG, conf)
     return liste
@@ -138,15 +142,25 @@ def v_extensions():
                            'les rallumer', True,
                            lambda: gs_set('org.gnome.shell', 'disable-user-extensions', 'false')))
     ref = reference()
+    if ref is None:
+        out.append(constat('reference', 'Extensions', AVERT,
+                           'pas encore d\'état de référence des extensions',
+                           'retenir les extensions actives : shadow docteur photo', False,
+                           None if coupees else (lambda: bool(photo()))))
+        ref = []
     shell = extensions_shell()
     actives = set(actives_gsettings())
-    eteintes = [u for u in ref if u not in actives]
+    # une extension désinstallée relève de « extension-absente », pas d'un rallumage
+    eteintes = [u for u in ref if u not in actives and (shell is None or u in shell)]
     if eteintes:
         def rallumer(us=tuple(eteintes)):
-            return all(lancer('gnome-extensions', 'enable', u)[0] == 0 for u in us)
+            res = [lancer('gnome-extensions', 'enable', u)[0] == 0 for u in us]
+            return any(res)
+        # pas de rallumage automatique : une extension peut avoir été éteinte exprès
         out.append(constat('extensions-eteintes', 'Extensions', AVERT,
-                           'éteintes alors qu\'elles font partie de Shadow : ' + ', '.join(e.split('@')[0] for e in eteintes),
-                           'les rallumer (si c\'est voulu : shadow docteur photo)', True, rallumer))
+                           'éteintes alors qu\'elles font partie de Shadow : ' + ', '.join(e.split('@')[0] for e in eteintes)
+                           + ' (si c\'est voulu : shadow docteur photo)',
+                           'les rallumer', False, rallumer))
     if shell is not None and not coupees:
         for u in ref:
             info = shell.get(u)
@@ -189,8 +203,11 @@ def v_theme():
         out.append(constat('theme-absent', 'Thème', PANNE, 'le thème Shadow n\'est plus dans ~/.themes',
                            'theme/eclipse.sh apply'))
     elif nom is not None and nom.strip("'") != 'Shadow':
+        # thème vidé (souvent après une MAJ ou un plantage de user-theme) : remis seul, une fois par démarrage ;
+        # un autre thème nommé est un choix, on ne fait que le signaler
+        vide = nom.strip("'") == ''
         out.append(constat('theme-change', 'Thème', AVERT, f'thème du shell : {nom.strip(chr(39)) or "celui de GNOME"}',
-                           'remettre le thème Shadow', True,
+                           'remettre le thème Shadow', vide,
                            lambda: gs_set('org.gnome.shell.extensions.user-theme', 'name', 'Shadow',
                                           schemas if os.path.isdir(schemas) else None)))
     gtk = os.path.join(MAISON, '.config/gtk-4.0/gtk.css')
@@ -369,7 +386,8 @@ def auto():
     constats = diagnostic()
     garde = lire_json(GARDE, {})
     boot = id_demarrage()
-    if garde.get('boot') != boot:
+    if (not isinstance(garde, dict) or garde.get('boot') != boot
+            or not isinstance(garde.get('deja'), list) or not isinstance(garde.get('signale'), list)):
         garde = {'boot': boot, 'deja': [], 'signale': []}
     a_faire = []
     for c in constats:
@@ -394,13 +412,16 @@ def auto():
         garde['signale'] += [c['id'] for c in nouveaux]
     # un souci réglé peut être signalé de nouveau s'il revient
     garde['signale'] = [i for i in garde['signale'] if any(c['id'] == i for c in restants)]
-    ecrire_json(GARDE, garde)
+    try:
+        ecrire_json(GARDE, garde)
+    except OSError:
+        pass                                   # disque plein : le diagnostic l'a déjà signalé
     return 0
 
 
 # Rallumer des extensions coupées par GNOME après un plantage peut le faire replanter :
 # une seule tentative automatique par démarrage pour celles-ci.
-RISQUEES = {'extensions-coupees', 'extensions-eteintes'}
+RISQUEES = {'extensions-coupees', 'extensions-eteintes', 'theme-change'}
 
 UNITE = os.path.join(MAISON, '.config/systemd/user')
 

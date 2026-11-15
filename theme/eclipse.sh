@@ -247,13 +247,15 @@ barre(){
       for k in use-custom-icon custom-icon-path show-activities-button; do printf 'lm|%s|%s\n' "$k" "$("${LM[@]}" get $LMS "$k")"; done
     } > "$SAUV_DIR/barre.txt"
   fi
+  # sauvegarde faite avant l'arrivée de cette clé : on y note la valeur par défaut de Logo Menu (bouton affiché)
+  grep -q '^lm|show-activities-button|' "$SAUV_DIR/barre.txt" || printf 'lm|show-activities-button|true\n' >> "$SAUV_DIR/barre.txt"
   local ico="$HOME/.local/share/icons/hicolor/scalable/apps"
   mkdir -p "$ico"
   command cp -f "$ICI/../identite/icones/shadow-symbolic.svg" "$ico/shadow-os-eclipse-symbolic.svg"
   "${LM[@]}" set $LMS custom-icon-path "$ico/shadow-os-eclipse-symbolic.svg"
   "${LM[@]}" set $LMS use-custom-icon true
   # l'extension Shadow masque le bouton Activités : Logo Menu ne doit pas le réafficher
-  "${LM[@]}" set $LMS show-activities-button false
+  "${LM[@]}" set $LMS show-activities-button false 2>/dev/null || true   # clé absente des vieilles versions
   local act='rgba(124,108,255,1)' act_t='rgba(255,255,255,1)' ina='rgba(236,235,250,0.07)'
   local ina_t='rgba(236,235,250,0.85)' vide_t='rgba(169,169,194,0.45)'
   "${SB[@]}" set $SBA active-workspace-background-color "$act"

@@ -167,8 +167,10 @@ mod_scripts(){
   ok "shadow-maj lié dans ~/.local/bin"
   faire "ln -sfn '$RACINE/apps/docteur/shadow_docteur.py' '$BIN/shadow-docteur'"
   faire "chmod +x '$RACINE/apps/docteur/shadow_docteur.py'"
-  faire "'$BIN/shadow-docteur' minuteur on"
-  ok "shadow-docteur lié, passage automatique toutes les 15 min"
+  # référence des extensions : seulement si aucune n'existe (jamais écraser un choix)
+  [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/shadow-os/docteur.json" ] || faire "'$BIN/shadow-docteur' photo >/dev/null || true"
+  if faire "'$BIN/shadow-docteur' minuteur on"; then ok "shadow-docteur lié, passage automatique toutes les 15 min"
+  else avert "shadow-docteur lié, minuteur non activé (pas de session utilisateur ?) : shadow docteur minuteur on"; fi
   if [ -f "$DESKTOP_REPO/bin/shadow" ]; then
     faire "ln -sfn '$DESKTOP_REPO/bin/shadow' '$BIN/shadow'"
     ok "commande shadow liée (depuis shadow-desktop)"

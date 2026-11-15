@@ -27,4 +27,30 @@ verif('pas de notification en boucle', len(notifs) == n)
 g = json.load(open(d.GARDE)); g['boot'] = 'autre'; json.dump(g, open(d.GARDE, 'w'))
 d.auto()
 verif('nouveau démarrage : nouvelle tentative', ('disable-user-extensions', 'false') in appels)
+# Extension éteinte exprès : signalée, jamais rallumée par « auto »
+etat['coupees'] = 'false'; appels.clear()
+d.reference = lambda: ['a@x', 'b@x']
+d.actives_gsettings = lambda: ['a@x']
+d.extensions_shell = lambda: {'a@x': {'state': 1.0}, 'b@x': {'state': 2.0}}
+lances = []
+d.lancer = lambda *cmd, entree=None: (lances.append(cmd), (0, ''))[1]
+json.dump({'boot': d.id_demarrage(), 'deja': [], 'signale': []}, open(d.GARDE, 'w'))
+d.auto()
+verif('éteinte exprès : pas de rallumage auto', not any('enable' in c for c in lances))
+verif('éteinte exprès : signalée', 'souci' in notifs[-1][0])
+# Garde corrompue : pas de plantage
+open(d.GARDE, 'w').write('[1, 2]')
+try:
+    d.auto(); verif('garde corrompue : pas de plantage', True)
+except Exception as e:
+    verif(f'garde corrompue : pas de plantage ({e})', False)
+# Référence absente : jamais créée en douce
+spec2 = importlib.util.spec_from_file_location('d2', os.path.expanduser('~/Shadow/apps/docteur/shadow_docteur.py'))
+d2 = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(d2)
+d2.CONFIG = os.path.join(tmp, 'absent', 'docteur.json')
+verif('référence absente : None', d2.reference() is None)
+verif('référence absente : rien écrit', not os.path.exists(d2.CONFIG))
+open(os.path.join(tmp, 'corrompu.json'), 'w').write('["pas", "un", "dict"]')
+d2.CONFIG = os.path.join(tmp, 'corrompu.json')
+verif('référence corrompue : None', d2.reference() is None)
 sys.exit(0 if ok else 1)
