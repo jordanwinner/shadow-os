@@ -585,7 +585,7 @@ class Centre(Adw.ApplicationWindow):
         def fin(ok):
             self._furtif_en_cours = False
             self.toast(('Mode furtif actif' if voulu else 'Mode furtif terminé') if ok
-                       else 'Échec : rien n’a été laissé à moitié (voir « shadow furtif etat »)')
+                       else 'Échec : voir « shadow furtif etat » dans un terminal')
             self.rafraichir()
         lancer(argv, fin)
 

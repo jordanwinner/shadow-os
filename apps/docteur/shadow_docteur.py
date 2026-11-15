@@ -21,6 +21,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 
 MAISON = os.path.expanduser('~')
 ICI = os.path.dirname(os.path.realpath(__file__))
@@ -322,6 +323,17 @@ def v_furtif():
     e = lire_json(os.path.join(ETAT_DIR, 'furtif'), {})
     if not isinstance(e, dict) or not e.get('actif'):
         return []
+    if e.get('en_cours'):
+        # activation lancée mais jamais confirmée (fenêtre fermée, processus tué) : état incertain
+        try:
+            age = time.time() - os.path.getmtime(os.path.join(ETAT_DIR, 'furtif'))
+        except OSError:
+            age = 0
+        if age > 300:
+            return [constat('furtif-interrompu', 'Mode furtif', AVERT,
+                            'activation du mode furtif interrompue : état réseau incertain',
+                            'shadow furtif off')]
+        return [constat('furtif', 'Mode furtif', OK, 'activation en cours')]
     if e.get('tor') and not os.path.exists('/run/shadow-furtif/tor'):
         # le marqueur root disparaît au redémarrage : Tor et ses règles aussi
         return [constat('furtif-clair', 'Mode furtif', PANNE,
