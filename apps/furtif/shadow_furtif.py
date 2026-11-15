@@ -209,7 +209,7 @@ if ip -6 addr show dev lo 2>/dev/null | grep -q 'inet6 ::1'; then
   echo 'TransPort [::1]:9040' >> /etc/shadow-os/furtif-torrc
 fi
 systemctl stop shadow-furtif-tor 2>/dev/null; systemctl reset-failed shadow-furtif-tor 2>/dev/null
-systemd-run --unit=shadow-furtif-tor --description="Shadow furtif : Tor" /usr/sbin/tor -f /etc/shadow-os/furtif-torrc >/dev/null \\
+systemd-run --unit=shadow-furtif-tor --description="Shadow furtif : Tor" /usr/sbin/tor -f /etc/shadow-os/furtif-torrc >/dev/null 2>&1 \\
   || {{ annuler; exit 4; }}
 # Tor prêt AVANT de lui confier le trafic (3 min au plus : premier démarrage à froid sur
 # une connexion lente ; ensuite le cache rend cela rapide). Journal de CETTE instance seulement.
