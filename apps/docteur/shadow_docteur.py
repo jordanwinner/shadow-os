@@ -318,7 +318,20 @@ def v_arsenal():
     return [constat('arsenal', 'Arsenal', OK, 'box Kali présente')]
 
 
-VERIFS = (v_extensions, v_barre, v_theme, v_commandes, v_shsh, v_systeme, v_mission, v_arsenal)
+def v_furtif():
+    e = lire_json(os.path.join(ETAT_DIR, 'furtif'), {})
+    if not isinstance(e, dict) or not e.get('actif'):
+        return []
+    if e.get('tor') and not os.path.exists('/run/shadow-furtif/tor'):
+        # le marqueur root disparaît au redémarrage : Tor et ses règles aussi
+        return [constat('furtif-clair', 'Mode furtif', PANNE,
+                        'mode furtif demandé mais Tor est arrêté (redémarrage ?) : le trafic sort EN CLAIR',
+                        'shadow furtif off puis shadow furtif on')]
+    return [constat('furtif', 'Mode furtif', OK,
+                    'trafic par Tor, identité masquée' if e.get('tor') else 'identité masquée (sans Tor)')]
+
+
+VERIFS = (v_extensions, v_barre, v_theme, v_commandes, v_shsh, v_systeme, v_mission, v_arsenal, v_furtif)
 
 
 def diagnostic():

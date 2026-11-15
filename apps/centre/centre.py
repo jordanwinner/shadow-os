@@ -19,12 +19,13 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 ICI = os.path.dirname(os.path.realpath(__file__))
 APPS = os.path.dirname(ICI)
-for dossier in ('modes', 'energie', 'arsenal'):
+for dossier in ('modes', 'energie', 'arsenal', 'furtif'):
     sys.path.insert(0, os.path.join(APPS, dossier))
 import energie   # noqa: E402
 import modes     # noqa: E402
 import shadow_cible  # noqa: E402
 import shadow_modes as moteur  # noqa: E402
+import shadow_furtif  # noqa: E402
 
 APP_ID = 'os.shadow.Centre'
 MAISON = os.path.expanduser('~')
@@ -155,6 +156,7 @@ def etat_systeme():
     e['terminaux'] = shadow_cible.shells_branches()
     e['tactile_dispo'] = os.access(TACTILE, os.X_OK)
     e['tactile'] = not os.path.exists(TACTILE_DRAPEAU)
+    e['furtif'] = shadow_furtif.etat_json()
     return e
 
 
@@ -322,6 +324,18 @@ class Centre(Adw.ApplicationWindow):
             self.b_terminal.set_sensitive(e['box_existe'])
             self.r_tactile.set_sensitive(e['tactile_dispo'])
             self.r_tactile.set_active(e['tactile'])
+            f = e['furtif']
+            self.r_furtif.set_active(f['actif'])
+            self.r_furtif.set_sensitive(not getattr(self, '_furtif_en_cours', False))
+            self.r_sans_tor.set_sensitive(not f['actif'])
+            if f['actif'] and f['tor']:
+                self.r_furtif.set_subtitle('Actif : trafic par Tor, MAC aléatoire, nom de la machine caché')
+            elif f['identite_seule_apres_redemarrage']:
+                self.r_furtif.set_subtitle('⚠ Tor arrêté au redémarrage : trafic en clair. Désactive puis réactive.')
+            elif f['actif']:
+                self.r_furtif.set_subtitle('Actif : identité réseau masquée, trafic en clair (sans Tor)')
+            else:
+                self.r_furtif.set_subtitle('Tout le trafic par Tor, adresse MAC aléatoire, nom de la machine caché')
         finally:
             self._maj = False
         return GLib.SOURCE_REMOVE
@@ -514,6 +528,16 @@ class Centre(Adw.ApplicationWindow):
         groupe.add(self.r_terminaux)
         page.add(groupe)
 
+        groupe = Adw.PreferencesGroup(title='Mode furtif',
+                                      description='Comme AnonSurf : rien ne sort en clair. Mot de passe demandé.')
+        self.r_furtif = Adw.SwitchRow(title='Mode furtif')
+        self.r_furtif.connect('notify::active', self._sur_furtif)
+        groupe.add(self.r_furtif)
+        self.r_sans_tor = Adw.SwitchRow(title='Sans Tor',
+                                        subtitle='Identité masquée seulement : pour le VPN d’un CTF (HTB, THM)')
+        groupe.add(self.r_sans_tor)
+        page.add(groupe)
+
         groupe = Adw.PreferencesGroup(title='Mode Pentest')
         rangee = Adw.ActionRow(title='Passer en mode Pentest',
                                subtitle='Fond « cible », tuiles, ne pas déranger, HUD, box démarrée et terminal ouvert')
@@ -546,6 +570,24 @@ class Centre(Adw.ApplicationWindow):
         shadow_cible.terminer()
         self.toast('Mission terminée, dossier conservé')
         self.rafraichir()
+
+    def _sur_furtif(self, rangee, _p):
+        if self._maj:
+            return
+        voulu = rangee.get_active()
+        argv = [MAISON + '/.local/bin/shadow-furtif', 'on' if voulu else 'off']
+        if voulu and self.r_sans_tor.get_active():
+            argv.append('--sans-tor')
+        self._furtif_en_cours = True
+        rangee.set_sensitive(False)
+        rangee.set_subtitle('Activation… (Tor peut mettre jusqu’à une minute)' if voulu else 'Retour au réseau normal…')
+
+        def fin(ok):
+            self._furtif_en_cours = False
+            self.toast(('Mode furtif actif' if voulu else 'Mode furtif terminé') if ok
+                       else 'Échec : rien n’a été laissé à moitié (voir « shadow furtif etat »)')
+            self.rafraichir()
+        lancer(argv, fin)
 
     def _sur_box(self, _b):
         if self.e.get('box_active'):
