@@ -125,7 +125,9 @@ if veut shsh; then
   else
     info "compilation de shsh $SHSH_DEP…"
     compat="$(mktemp)"
-    if (cd "$SHSH_REPO" && cargo build --release -q && cargo build -q && tests/compat.sh >"$compat" 2>&1); then
+    # la sortie du compilateur va dans le fichier (dernière ligne = bilan des tests, ou l'erreur)
+    if (cd "$SHSH_REPO" && cargo build --release -q >"$compat" 2>&1 && cargo build -q >>"$compat" 2>&1 \
+          && tests/compat.sh >>"$compat" 2>&1); then
       SHSH_BIN="$SHSH_REPO/target/release/shsh"
       # empreinte prise juste après les tests : l'étape root refuse un binaire modifié entre-temps
       SHSH_SHA="$(sha256sum "$SHSH_BIN" | cut -d' ' -f1)"
