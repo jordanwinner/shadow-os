@@ -157,8 +157,11 @@ if [ "$mode" = veille ]; then
   # un « shadow maj » en cours tient le verrou : on attend qu'il ait fini (10 min au plus)
   exec 9>"$VERROU"
   flock -w 600 9 || exit 0
+  flock -u 9; exec 9>&-          # on ne garde pas le verrou : compter ne doit jamais bloquer « shadow maj »
   en_cours_vivant && exit 0
   compter
+  # une mise à jour a démarré pendant le comptage : son propre recompte fera foi
+  en_cours_vivant && exit 0
   ecrire_attente 1
   exit 0
 fi
