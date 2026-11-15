@@ -86,6 +86,7 @@ le trousseau personnel). Pour publier sur une URL (GitHub Pages, serveur) : copi
 | `shadow arsenal install <pack>` | installe un pack d'outils Kali (web, recon, reverse, passwords…) |
 | `shadow arsenal export <appli>` | ajoute une appli Kali à la grille (dossier « Arsenal ») |
 | `shadow maj` | met tout à jour avec un seul mot de passe : apt, snap, Flatpak, extensions GNOME (styles refusionnés), arsenal Kali, shsh |
+| `shadow maj instantanes` / `retour [ID]` | avant chaque mise à jour : versions des paquets, `/etc`, révisions snap et paquets actuels gardés (3 derniers, `/var/lib/shadow-os/instantanes`) ; `retour` réinstalle les versions d'avant et ramène les snaps |
 | `shadow maj verifier` | montre ce qui attend une mise à jour, sans rien changer |
 | `shadow docteur` / `reparer` | vérifie extensions, barre, thème, commandes, shsh, système, mission, arsenal ; répare ce qui peut l'être. Passe seul toutes les 15 min (`shadow docteur minuteur on`) : répare sans risque, prévient dans l'îlot pour le reste |
 | `shadow cible ADRESSE NOM` / `fin` | mission : îlot, `$CIBLE` dans les terminaux, dossier `~/ctf/NOM` ; shsh y tient `journal.md` |

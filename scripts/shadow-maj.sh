@@ -9,6 +9,8 @@
 #   shadow maj veille       compte ce qui attend et le note pour l'îlot (minuteur, sans bruit)
 #   shadow maj fenetre      ouvre un terminal qui lance « shadow maj » (clic sur l'îlot)
 #   shadow maj minuteur [on|off]   veille automatique : 10 min après le démarrage, puis toutes les 6 h
+#   shadow maj instantanes  les instantanés pris avant chaque mise à jour (3 derniers gardés)
+#   shadow maj retour [ID]  revient aux versions de paquets et de snaps d'avant (le dernier par défaut)
 #
 # Les étapes root (apt, snap, installation de shsh) sont regroupées dans un
 # script unique lancé par pkexec : la fenêtre de mot de passe ne s'ouvre qu'une fois.
@@ -39,12 +41,16 @@ for a in "$@"; do                      # « verifier » compte où qu'il soit pl
     veille) mode=veille ;;
     minuteur) mode=minuteur ;;
     fenetre|fenêtre) mode=fenetre ;;
+    instantanes|instantanés) mode=instantanes ;;
+    retour) mode=retour ;;
   esac
 done
 while [ $# -gt 0 ]; do
   case "$1" in
     verifier|vérifier|-n|--verifier|veille|fenetre|fenêtre) ;;
     minuteur) shift; MINUTEUR="${1:-etat}"; break ;;
+    instantanes|instantanés) ;;
+    retour) shift; RETOUR_ID="${1:-}"; break ;;
     --sans|--seulement) liste="$1"; [ "$1" = --seulement ] && choisies=() ;;
     -h|--help|aide) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) printf 'shadow maj : option « %s » inconnue (shadow maj aide)\n' "$1" >&2; exit 2 ;;
@@ -132,6 +138,78 @@ ecrire_attente(){                  # $1 = 1 pour prévenir par une notification 
 }
 
 # ════════════════════════════════════════════════════════════════════════════
+# ── Instantanés légers : versions des paquets, /etc, révisions snap, et les .deb
+#    actuels de tout ce que la mise à jour va changer (pour pouvoir y revenir).
+INST_DIR=/var/lib/shadow-os/instantanes
+script_instantane(){
+  cat <<'FIN'
+inst="/var/lib/shadow-os/instantanes/$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$inst/debs" && chmod 755 /var/lib/shadow-os /var/lib/shadow-os/instantanes "$inst"
+dpkg-query -W -f='${binary:Package}\t${Version}\n' > "$inst/paquets.tsv"
+# /etc contient des secrets (mots de passe hachés, clés) : archive lisible par root seulement
+tar -czf "$inst/etc.tar.gz" -C / etc 2>/dev/null; chmod 600 "$inst/etc.tar.gz"
+command -v snap >/dev/null && snap list 2>/dev/null | awk 'NR>1{print $1"\t"$3}' > "$inst/snaps.tsv"
+LC_ALL=C apt-get -s full-upgrade 2>/dev/null | sed -n 's/^Inst \([^ ]*\) \[\([^]]*\)\].*/\1\t\2/p' > "$inst/changent.tsv"
+if [ -s "$inst/changent.tsv" ]; then
+  command -v dpkg-repack >/dev/null || apt-get install -y -q dpkg-repack >/dev/null 2>&1 || true
+  ( cd "$inst/debs" && while IFS=$'\t' read -r p v; do
+      apt-get download -q "$p=$v" >/dev/null 2>&1 || dpkg-repack "$p" >/dev/null 2>&1 || echo "$p" >> ../manquants.txt
+    done < ../changent.tsv )
+fi
+echo "  · instantané $(basename "$inst") : $(wc -l < "$inst/changent.tsv") paquet(s) gardé(s) dans leur version actuelle$( [ -s "$inst/manquants.txt" ] && echo ", $(wc -l < "$inst/manquants.txt") introuvable(s)")"
+# on garde les 3 derniers
+ls -1d /var/lib/shadow-os/instantanes/2* 2>/dev/null | head -n -3 | xargs -r rm -rf
+FIN
+}
+
+if [ "$mode" = instantanes ]; then
+  titre "Instantanés (avant chaque mise à jour)"
+  trouve=0
+  for d in $(ls -1d "$INST_DIR"/2* 2>/dev/null | sort -r); do
+    trouve=1
+    n=$(wc -l < "$d/changent.tsv" 2>/dev/null || echo 0)
+    m=$( [ -s "$d/manquants.txt" ] && echo " · $(wc -l < "$d/manquants.txt") introuvable(s)" )
+    info "$(basename "$d") · $n paquet(s) récupérable(s)$m · $(du -sh "$d" 2>/dev/null | cut -f1)"
+  done
+  [ $trouve = 1 ] || info "aucun : le premier sera pris au prochain « shadow maj »"
+  exit 0
+fi
+
+if [ "$mode" = retour ]; then
+  id="${RETOUR_ID:-$(ls -1d "$INST_DIR"/2* 2>/dev/null | sort | tail -1 | xargs -r basename)}"
+  [[ "$id" =~ ^[0-9]{8}-[0-9]{6}$ ]] && [ -d "$INST_DIR/$id" ] || { printf 'shadow maj retour : instantané « %s » introuvable (shadow maj instantanes)\n' "$id" >&2; exit 2; }
+  titre "Retour à l'instantané $id (un seul mot de passe)"
+  retour="$(printf 'inst=%q\n' "$INST_DIR/$id"; cat <<'FIN'
+export DEBIAN_FRONTEND=noninteractive
+cd "$inst" || exit 2
+declare -A deb
+for f in debs/*.deb; do [ -e "$f" ] || continue; deb["$(dpkg-deb -f "$f" Package):$(dpkg-deb -f "$f" Version)"]="$f"; done
+a_remettre=()
+while IFS=$'\t' read -r p v; do
+  cur="$(dpkg-query -W -f='${Version}' "$p" 2>/dev/null)"
+  [ "$cur" = "$v" ] && continue
+  f="${deb[${p%%:*}:$v]:-}"
+  [ -n "$f" ] && a_remettre+=("./$f") || echo "  ✘ $p $v : pas de paquet gardé"
+done < changent.tsv
+if [ ${#a_remettre[@]} -gt 0 ]; then
+  echo "  · ${#a_remettre[@]} paquet(s) remis dans leur version d'avant"
+  apt-get install -y -q --allow-downgrades -o Dpkg::Options::=--force-confold "${a_remettre[@]}" || exit 3
+else
+  echo "  · paquets : déjà dans les versions de l'instantané"
+fi
+if [ -s snaps.tsv ] && command -v snap >/dev/null; then
+  while IFS=$'\t' read -r n rev; do
+    cur="$(snap list "$n" 2>/dev/null | awk 'NR==2{print $3}')"
+    [ -n "$cur" ] && [ "$cur" != "$rev" ] && { echo "  · snap $n : révision $cur → $rev"; snap revert "$n" --revision "$rev" >/dev/null || echo "  ✘ snap $n : retour impossible"; }
+  done < snaps.tsv
+fi
+echo "  · /etc d'avant (non restauré automatiquement) : $inst/etc.tar.gz"
+FIN
+)"
+  if pkexec /bin/bash -c "$retour"; then ok "retour à $id terminé"; else avert "retour à $id interrompu ou incomplet"; exit 1; fi
+  exit 0
+fi
+
 if [ "$mode" = minuteur ]; then
   U="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
   case "${MINUTEUR:-etat}" in
@@ -257,6 +335,8 @@ if veut systeme || [ -n "$SHSH_BIN" ]; then
     echo 'r=0'
     if veut systeme; then
       echo 'echo "  · apt : liste des paquets…"; apt-get update -q || r=1'
+      # instantané juste avant de toucher aux paquets (versions actuelles gardées pour « shadow maj retour »)
+      script_instantane
       echo 'apt-get -y -q -o Dpkg::Options::=--force-confold full-upgrade || r=1'
       echo 'apt-get -y -q autoremove --purge || true'
       echo 'command -v snap >/dev/null && { echo "  · snap…"; snap refresh || r=1; }'
