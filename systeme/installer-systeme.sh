@@ -4,6 +4,7 @@
 #   2. Plymouth  : animation de démarrage Shadow (+ initramfs)
 #   3. Connexion : fond Éclipse + logo Shadow sur l'écran de connexion (GDM)
 #   4. À propos  : « Shadow (base Ubuntu …) » + logo dans Réglages › À propos
+#   5. Session   : « Shadow » à l'écran de connexion (extensions intégrées au système)
 # Tout est sauvegardé dans /var/backups/shadow-os ; annuler : desinstaller-systeme.sh
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "À lancer avec sudo : sudo $0" >&2; exit 1; }
@@ -106,6 +107,10 @@ for v in "ubuntu-logo-text-dark.svg:sombre" "ubuntu-logo-text.svg:clair"; do
   install -m644 "$ICI/a-propos/shadow-logo-texte-${v##*:}.svg" "$f"
 done
 ok "logo Shadow dans Réglages › À propos (originaux mis de côté par dpkg-divert)"
+
+# ── 4c. session « Shadow » : les extensions de Shadow chargées par le système ──
+titre "Session Shadow"
+bash "$ICI/session/installer-session.sh"
 
 # ── 5. droits : tout ce que Shadow installe doit être lisible ──────────────
 chmod 755 /usr/share/backgrounds/shadow /usr/share/plymouth/themes/shadow /boot/grub/themes/shadow-eclipse

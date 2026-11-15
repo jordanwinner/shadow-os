@@ -1,0 +1,26 @@
+{
+    "parentMode": "user",
+    "stylesheetName": "Yaru/gnome-shell.css",
+    "colorScheme": "prefer-dark",
+    "themeResourceName": "theme/Yaru/gnome-shell-theme.gresource",
+    "iconsResourceName": "theme/Yaru/gnome-shell-icons.gresource",
+    "debugFlags": [
+        "backtrace-crashes-all"
+    ],
+    "enabledExtensions": [
+        "blur-my-shell@aunetx",
+        "caffeine@patapon.info",
+        "compiz-alike-magic-lamp-effect@hermes83.github.com",
+        "dash-to-dock@micxgx.gmail.com",
+        "ding@rastersoft.com",
+        "dynamic-island-v2@jordan",
+        "logomenu@aryan_k",
+        "rounded-window-corners@fxgn",
+        "shadow-os@jordan",
+        "user-theme@gnome-shell-extensions.gcampax.github.com",
+        "ubuntu-appindicators@ubuntu.com",
+        "snapd-prompting@canonical.com",
+        "snapd-search-provider@canonical.com",
+        "web-search-provider@ubuntu.com"
+    ]
+}

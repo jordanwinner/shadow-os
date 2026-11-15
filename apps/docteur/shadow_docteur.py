@@ -343,7 +343,19 @@ def v_furtif():
                     'trafic par Tor, identité masquée' if e.get('tor') else 'identité masquée (sans Tor)')]
 
 
-VERIFS = (v_extensions, v_barre, v_theme, v_commandes, v_shsh, v_systeme, v_mission, v_arsenal, v_furtif)
+def v_session():
+    """La session Shadow rend les extensions incassables ; la session Ubuntu, non."""
+    if not os.path.exists('/usr/share/wayland-sessions/shadow.desktop'):
+        return []
+    bureau = os.environ.get('XDG_CURRENT_DESKTOP', '')
+    if 'Shadow' in bureau.split(':'):
+        return [constat('session', 'Session', OK, 'session Shadow : extensions intégrées au système')]
+    return [constat('session', 'Session', AVERT,
+                    'session Ubuntu : les extensions de Shadow peuvent être coupées en bloc',
+                    'déconnecte-toi et choisis « Shadow » (roue en bas à droite de l\'écran de connexion)')]
+
+
+VERIFS = (v_session, v_extensions, v_barre, v_theme, v_commandes, v_shsh, v_systeme, v_mission, v_arsenal, v_furtif)
 
 
 def diagnostic():

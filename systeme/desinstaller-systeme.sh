@@ -33,3 +33,6 @@ for f in /usr/share/pixmaps/ubuntu-logo-text-dark.svg /usr/share/pixmaps/ubuntu-
 done
 ok "logo Ubuntu rétabli dans À propos"
 echo "Les fichiers Shadow (/boot/grub/themes/shadow-eclipse, /usr/share/plymouth/themes/shadow) restent en place, inactifs."
+
+# session « Shadow »
+bash "$(dirname "$(readlink -f "$0")")/session/installer-session.sh" --retirer || true
