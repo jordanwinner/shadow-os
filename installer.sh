@@ -165,6 +165,8 @@ mod_scripts(){
   faire "ln -sfn '$RACINE/scripts/shadow-maj.sh' '$BIN/shadow-maj'"
   faire "chmod +x '$RACINE/scripts/shadow-maj.sh'"
   ok "shadow-maj lié dans ~/.local/bin"
+  if faire "'$BIN/shadow-maj' minuteur on"; then ok "veille des mises à jour (îlot) toutes les 6 h"
+  else avert "veille des mises à jour non activée (pas de session utilisateur ?) : shadow maj minuteur on"; fi
   faire "ln -sfn '$RACINE/apps/docteur/shadow_docteur.py' '$BIN/shadow-docteur'"
   faire "chmod +x '$RACINE/apps/docteur/shadow_docteur.py'"
   # référence des extensions : seulement si aucune n'existe (jamais écraser un choix)

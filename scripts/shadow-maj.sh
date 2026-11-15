@@ -6,6 +6,9 @@
 #   shadow maj verifier     montre ce qui attend, sans rien changer (pas de mot de passe)
 #   shadow maj --sans X…    saute des étapes : systeme flatpak extensions arsenal shsh
 #   shadow maj --seulement X…
+#   shadow maj veille       compte ce qui attend et le note pour l'îlot (minuteur, sans bruit)
+#   shadow maj fenetre      ouvre un terminal qui lance « shadow maj » (clic sur l'îlot)
+#   shadow maj minuteur [on|off]   veille automatique : 10 min après le démarrage, puis toutes les 6 h
 #
 # Les étapes root (apt, snap, installation de shsh) sont regroupées dans un
 # script unique lancé par pkexec : la fenêtre de mot de passe ne s'ouvre qu'une fois.
@@ -31,11 +34,17 @@ etape_valide(){ local e; for e in "${ETAPES[@]}"; do [ "$e" = "$1" ] && return 0
   printf 'shadow maj : étape « %s » inconnue (étapes : %s)\n' "$1" "${ETAPES[*]}" >&2; exit 2; }
 mode=faire; choisies=("${ETAPES[@]}"); liste=""
 for a in "$@"; do                      # « verifier » compte où qu'il soit placé
-  case "$a" in verifier|vérifier|-n|--verifier) mode=verifier ;; esac
+  case "$a" in
+    verifier|vérifier|-n|--verifier) mode=verifier ;;
+    veille) mode=veille ;;
+    minuteur) mode=minuteur ;;
+    fenetre|fenêtre) mode=fenetre ;;
+  esac
 done
 while [ $# -gt 0 ]; do
   case "$1" in
-    verifier|vérifier|-n|--verifier) ;;
+    verifier|vérifier|-n|--verifier|veille|fenetre|fenêtre) ;;
+    minuteur) shift; MINUTEUR="${1:-etat}"; break ;;
     --sans|--seulement) liste="$1"; [ "$1" = --seulement ] && choisies=() ;;
     -h|--help|aide) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) printf 'shadow maj : option « %s » inconnue (shadow maj aide)\n' "$1" >&2; exit 2 ;;
@@ -81,37 +90,115 @@ verifier_shsh(){
   if [ "$dep" != "$inst" ] || [ -n "$plus_recent" ]; then shsh_a_jour=1; SHSH_DEP="$dep"; SHSH_INST="${inst:-absent}"; fi
 }
 
+# ── Ce qui attend, compté une fois pour « verifier » et « veille » ──────────
+compter(){
+  N_APT=0; N_DIFF=0; N_SNAP=0; N_FLATPAK=0; N_EXT=0
+  if veut systeme; then
+    local sim; sim="$(LC_ALL=C apt-get -s full-upgrade 2>/dev/null)"
+    N_APT="$(grep -c '^Inst ' <<<"$sim")"
+    N_DIFF="$(sed -n '/phasing/,/^[^ ]/p' <<<"$sim" | grep '^ ' | wc -w)"
+    N_SNAP="$(snap refresh --list 2>/dev/null | tail -n +2 | wc -l)"
+  fi
+  veut flatpak && command -v flatpak >/dev/null && N_FLATPAK="$(flatpak remote-ls --updates 2>/dev/null | wc -l)"
+  if veut extensions; then verifier_extensions; N_EXT=${#ext_a_jour[@]}; fi
+  veut shsh && verifier_shsh
+  N_TOTAL=$(( N_APT + N_SNAP + N_FLATPAK + N_EXT + shsh_a_jour ))
+}
+
+ATTENTE="$ETAT/maj-attente"        # lu par l'îlot : JSON, absent quand tout est à jour
+EN_COURS="$ETAT/maj-en-cours"      # présent pendant « shadow maj »
+ecrire_attente(){                  # $1 = 1 pour prévenir par une notification si le nombre a augmenté
+  mkdir -p "$ETAT"
+  local avant=0
+  [ -f "$ATTENTE" ] && avant="$(python3 -c 'import json,sys;print(int(json.load(open(sys.argv[1])).get("total",0)))' "$ATTENTE" 2>/dev/null || echo 0)"
+  if [ "$N_TOTAL" -eq 0 ]; then rm -f "$ATTENTE"; return 0; fi
+  printf '{"total": %d, "apt": %d, "snap": %d, "flatpak": %d, "extensions": %d, "shsh": %d, "redemarrage": %s, "date": "%s"}\n' \
+    "$N_TOTAL" "$N_APT" "$N_SNAP" "$N_FLATPAK" "$N_EXT" "$shsh_a_jour" \
+    "$([ -f /var/run/reboot-required ] && echo true || echo false)" "$(date -Iseconds)" > "$ATTENTE.tmp" \
+    && mv -f "$ATTENTE.tmp" "$ATTENTE"
+  if [ "${1:-0}" = 1 ] && [ "$N_TOTAL" -gt "$avant" ]; then
+    notify-send -a Shadow -i shadow-os "$N_TOTAL mise(s) à jour disponible(s)" \
+      "Touche l'îlot pour tout mettre à jour (shadow maj)" 2>/dev/null || true
+  fi
+}
+
 # ════════════════════════════════════════════════════════════════════════════
+if [ "$mode" = minuteur ]; then
+  U="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+  case "${MINUTEUR:-etat}" in
+    on)
+      mkdir -p "$U"
+      printf '[Unit]\nDescription=Shadow : compte les mises à jour pour l’îlot\n\n[Service]\nType=oneshot\nNice=10\nExecStart=%s veille\n' \
+        "$HOME/.local/bin/shadow-maj" > "$U/shadow-maj-veille.service"
+      printf '[Unit]\nDescription=Shadow : veille des mises à jour\n\n[Timer]\nOnStartupSec=10min\nOnUnitActiveSec=6h\nRandomizedDelaySec=5min\n\n[Install]\nWantedBy=timers.target\n' \
+        > "$U/shadow-maj-veille.timer"
+      systemctl --user daemon-reload && systemctl --user enable --now shadow-maj-veille.timer \
+        && echo "Veille des mises à jour : 10 min après le démarrage, puis toutes les 6 h" ;;
+    off)
+      systemctl --user disable --now shadow-maj-veille.timer 2>/dev/null
+      rm -f "$U/shadow-maj-veille.service" "$U/shadow-maj-veille.timer" "$ATTENTE"
+      systemctl --user daemon-reload; echo "Veille des mises à jour arrêtée" ;;
+    *) printf 'Veille des mises à jour : %s\n' "$(systemctl --user is-active shadow-maj-veille.timer 2>/dev/null)" ;;
+  esac
+  exit 0
+fi
+
+if [ "$mode" = veille ]; then
+  # un « shadow maj » en cours s'occupe déjà de tout
+  [ -f "$EN_COURS" ] && exit 0
+  compter
+  ecrire_attente 1
+  exit 0
+fi
+
+if [ "$mode" = fenetre ]; then
+  # banc d'essai : on prouve que le clic arrive ici, sans rien lancer
+  if [ -n "${SHADOW_MAJ_ESSAI:-}" ]; then date -Iseconds > "$ETAT/maj-fenetre-essai"; exit 0; fi
+  # terminal de l'utilisateur, sinon le premier trouvé ; la fenêtre reste ouverte pour lire le bilan
+  # chemin absolu : le PATH hérité de GNOME Shell ne contient pas forcément ~/.local/bin
+  cmd=(bash -c '"$0"; echo; read -rp "Entrée pour fermer… " _' "${SHADOW_MAJ_CMD:-$HOME/.local/bin/shadow-maj}")
+  for t in "${TERMINAL:-}" kitty ptyxis gnome-terminal kgx xterm; do
+    [ -n "$t" ] && command -v "$t" >/dev/null || continue
+    case "$t" in
+      gnome-terminal|ptyxis|kgx) exec "$t" --title "Shadow · mise à jour" -- "${cmd[@]}" ;;
+      kitty) exec kitty --title "Shadow · mise à jour" "${cmd[@]}" ;;
+      *) exec "$t" -e "${cmd[@]}" ;;
+    esac
+  done
+  notify-send -a Shadow -i shadow-os "Aucun terminal trouvé" "Lance « shadow maj » toi-même" 2>/dev/null
+  exit 1
+fi
+
 if [ "$mode" = verifier ]; then
   titre "Ce qui attend une mise à jour"
+  compter
   if veut systeme; then
     # ce qu'apt installerait vraiment (hors paquets différés par le déploiement progressif d'Ubuntu)
-    n="$(apt-get -s full-upgrade 2>/dev/null | grep -c '^Inst ')"
-    differes="$(apt-get -s full-upgrade 2>/dev/null | sed -n '/phasage\|phasing/,/^[^ ]/p' | grep '^ ' | wc -w)"
-    [ "$n" -gt 0 ] && info "apt : $n paquet(s)" || ok "apt : à jour"
-    [ "$differes" -gt 0 ] && info "apt : $differes paquet(s) retenus par Ubuntu (déploiement progressif), rien à faire"
-    n="$(snap refresh --list 2>/dev/null | tail -n +2 | wc -l)"
-    [ "$n" -gt 0 ] && info "snap : $n paquet(s)" || ok "snap : à jour"
+    [ "$N_APT" -gt 0 ] && info "apt : $N_APT paquet(s)" || ok "apt : à jour"
+    [ "$N_DIFF" -gt 0 ] && info "apt : $N_DIFF paquet(s) retenus par Ubuntu (déploiement progressif), rien à faire"
+    [ "$N_SNAP" -gt 0 ] && info "snap : $N_SNAP paquet(s)" || ok "snap : à jour"
     [ -f /var/run/reboot-required ] && info "redémarrage demandé par une mise à jour précédente"
   fi
   if veut flatpak && command -v flatpak >/dev/null; then
-    n="$(flatpak remote-ls --updates 2>/dev/null | wc -l)"
-    [ "$n" -gt 0 ] && info "Flatpak : $n élément(s)" || ok "Flatpak : à jour"
+    [ "$N_FLATPAK" -gt 0 ] && info "Flatpak : $N_FLATPAK élément(s)" || ok "Flatpak : à jour"
   fi
   if veut extensions; then
-    verifier_extensions
-    if [ ${#ext_a_jour[@]} -eq 0 ]; then ok "extensions GNOME : à jour (GNOME $GSHELL_VER)"
+    if [ "$N_EXT" -eq 0 ]; then ok "extensions GNOME : à jour (GNOME $GSHELL_VER)"
     else for e in "${ext_a_jour[@]}"; do read -r u l d _ <<<"$e"; info "extension $u : v$l → v$d"; done; fi
   fi
   if veut shsh; then
-    verifier_shsh
     [ $shsh_a_jour = 1 ] && info "shsh : dépôt $SHSH_DEP, installé $SHSH_INST (à recompiler)" || ok "shsh : à jour"
   fi
   veut arsenal && info "arsenal Kali : « shadow arsenal update » (vérifié pendant la mise à jour)"
+  # une vérification complète met aussi l'îlot à jour (sans notification)
+  [ ${#choisies[@]} -eq ${#ETAPES[@]} ] && ecrire_attente 0
   exit 0
 fi
 
 mkdir -p "$ETAT"
+# l'îlot affiche « Mise à jour… » tant que ce fichier existe
+date -Iseconds > "$EN_COURS"
+trap 'rm -f "$EN_COURS"' EXIT
 exec > >(tee -a "$JOURNAL") 2>&1
 printf '\n===== shadow maj · %s =====\n' "$(date '+%F %T')"
 
@@ -203,6 +290,10 @@ if veut arsenal; then
   elif shadow arsenal update; then ok "arsenal à jour"; BILAN_OK+=("arsenal")
   else avert "arsenal : échec de la mise à jour"; fi
 fi
+
+# L'îlot se recalcule sur tout ce qui reste, en arrière-plan pour ne pas retarder le bilan
+( choisies=("${ETAPES[@]}"); ext_a_jour=(); shsh_a_jour=0; compter; ecrire_attente 0 ) >/dev/null 2>&1 &
+disown 2>/dev/null || true
 
 # Bilan
 titre "Bilan"
