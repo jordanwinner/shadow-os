@@ -30,6 +30,26 @@ rempli.sprite = Sprite();
 rempli.sprite.SetPosition(barre.x, barre.y, 11);
 global.progres = 0;
 
+# --- ce que fait la machine : démarrage, extinction, redémarrage ou mises à jour ----------
+mode = Plymouth.GetMode();
+global.arret = 0;
+global.maj = 0;
+if (mode == "shutdown" || mode == "reboot") global.arret = 1;
+if (mode == "updates" || mode == "system-upgrade" || mode == "firmware-upgrade") global.maj = 1;
+etat.texte = "";
+if (mode == "shutdown") etat.texte = "Extinction";
+if (mode == "reboot") etat.texte = "Redémarrage";
+if (global.maj) etat.texte = "Installation des mises à jour · n'éteins pas l'ordinateur";
+etat.sprite = Sprite();
+if (etat.texte != "") {
+  etat.image = Image.Text(etat.texte, 0.85, 0.82, 1, 1, "Inter 15");
+  etat.sprite.SetImage(etat.image);
+  etat.y = barre.y;
+  if (global.maj) etat.y = barre.y + 22 * s;
+  etat.sprite.SetPosition(Math.Int(W / 2 - etat.image.GetWidth() / 2), Math.Int(etat.y), 12);
+}
+etat.sprite.SetOpacity(0);
+
 # --- animation : fondu d'entrée puis lente respiration du halo --------------
 global.temps = 0;
 fun rafraichir() {
@@ -37,9 +57,20 @@ fun rafraichir() {
   o = global.temps / 45;
   if (o > 1) o = 1;
   respire = 0.92 + 0.08 * Math.Sin(global.temps / 22);
-  logo.sprite.SetOpacity(o * respire);
-  piste.sprite.SetOpacity(o);
-  rempli.sprite.SetOpacity(o);
+  if (global.arret) {
+    # extinction : l'éclipse s'éteint doucement, pas de barre (rien à mesurer)
+    eteint = 1 - global.temps / 260;
+    if (eteint < 0.35) eteint = 0.35;
+    logo.sprite.SetOpacity(o * eteint);
+    piste.sprite.SetOpacity(0);
+    rempli.sprite.SetOpacity(0);
+    etat.sprite.SetOpacity(o * 0.9);
+  } else {
+    logo.sprite.SetOpacity(o * respire);
+    piste.sprite.SetOpacity(o);
+    rempli.sprite.SetOpacity(o);
+    etat.sprite.SetOpacity(o);
+  }
 }
 Plymouth.SetRefreshFunction(rafraichir);
 
@@ -51,6 +82,12 @@ fun avancer(duree, p) {
   rempli.sprite.SetImage(rempli.source.Scale(l, barre.h));
 }
 Plymouth.SetBootProgressFunction(avancer);
+
+# mises à jour hors ligne : la vraie progression (0 à 100)
+fun progression_maj(p) {
+  avancer(0, p / 100);
+}
+Plymouth.SetSystemUpdateFunction(progression_maj);
 
 # --- messages (fsck, etc.) --------------------------------------------------
 message.sprite = Sprite();
