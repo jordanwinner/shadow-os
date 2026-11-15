@@ -244,7 +244,7 @@ SB_KEYS=(active-workspace-background-color active-workspace-text-color inactive-
 barre(){
   if [ ! -f "$SAUV_DIR/barre.txt" ]; then
     { for k in "${SB_KEYS[@]}"; do printf 'sb|%s|%s\n' "$k" "$("${SB[@]}" get $SBA "$k")"; done
-      for k in use-custom-icon custom-icon-path; do printf 'lm|%s|%s\n' "$k" "$("${LM[@]}" get $LMS "$k")"; done
+      for k in use-custom-icon custom-icon-path show-activities-button; do printf 'lm|%s|%s\n' "$k" "$("${LM[@]}" get $LMS "$k")"; done
     } > "$SAUV_DIR/barre.txt"
   fi
   local ico="$HOME/.local/share/icons/hicolor/scalable/apps"
@@ -252,6 +252,8 @@ barre(){
   command cp -f "$ICI/../identite/icones/shadow-symbolic.svg" "$ico/shadow-os-eclipse-symbolic.svg"
   "${LM[@]}" set $LMS custom-icon-path "$ico/shadow-os-eclipse-symbolic.svg"
   "${LM[@]}" set $LMS use-custom-icon true
+  # l'extension Shadow masque le bouton Activités : Logo Menu ne doit pas le réafficher
+  "${LM[@]}" set $LMS show-activities-button false
   local act='rgba(124,108,255,1)' act_t='rgba(255,255,255,1)' ina='rgba(236,235,250,0.07)'
   local ina_t='rgba(236,235,250,0.85)' vide_t='rgba(169,169,194,0.45)'
   "${SB[@]}" set $SBA active-workspace-background-color "$act"
