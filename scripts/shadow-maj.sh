@@ -85,8 +85,11 @@ verifier_shsh(){
 if [ "$mode" = verifier ]; then
   titre "Ce qui attend une mise à jour"
   if veut systeme; then
-    n="$(apt list --upgradable 2>/dev/null | tail -n +2 | wc -l)"
+    # ce qu'apt installerait vraiment (hors paquets différés par le déploiement progressif d'Ubuntu)
+    n="$(apt-get -s full-upgrade 2>/dev/null | grep -c '^Inst ')"
+    differes="$(apt-get -s full-upgrade 2>/dev/null | sed -n '/phasage\|phasing/,/^[^ ]/p' | grep '^ ' | wc -w)"
     [ "$n" -gt 0 ] && info "apt : $n paquet(s)" || ok "apt : à jour"
+    [ "$differes" -gt 0 ] && info "apt : $differes paquet(s) retenus par Ubuntu (déploiement progressif), rien à faire"
     n="$(snap refresh --list 2>/dev/null | tail -n +2 | wc -l)"
     [ "$n" -gt 0 ] && info "snap : $n paquet(s)" || ok "snap : à jour"
     [ -f /var/run/reboot-required ] && info "redémarrage demandé par une mise à jour précédente"
