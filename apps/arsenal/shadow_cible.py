@@ -385,12 +385,15 @@ def exporter(md, pdf=True):
     dossier = os.path.dirname(os.path.abspath(md))
     with open(md) as f:
         texte = f.read()
-    corps = markdown.markdown(texte, extensions=['tables', 'fenced_code'], output_format='html')
+    corps = assainir(markdown.markdown(texte, extensions=['tables', 'fenced_code'], output_format='html'))
     # tableau de résumé (en-tête vide en Markdown) : pas de ligne d'en-tête vide dans le PDF
     corps = re.sub(r'<table>\s*<thead>\s*<tr>\s*(?:<th>\s*</th>\s*)+</tr>\s*</thead>', '<table class="resume">', corps, count=1)
     titre = re.search(r'^# (.+)$', texte, re.M)
     titre = html_echappe(titre.group(1)) if titre else 'Rapport de mission'
-    page = (f'<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>{titre}</title>'
+    # CSP : aucun script, aucune ressource distante, même si quelque chose passait le filtre
+    csp = "default-src 'none'; img-src 'self' file:; style-src 'unsafe-inline'"
+    page = (f'<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+            f'<meta http-equiv="Content-Security-Policy" content="{csp}"><title>{titre}</title>'
             f'<style>{STYLE}</style></head><body>{corps}'
             f'<p class="pied">Rapport généré par Shadow OS · usage restreint au périmètre de la mission</p></body></html>')
     html = os.path.join(dossier, 'rapport.html')
@@ -402,11 +405,16 @@ def exporter(md, pdf=True):
     if not chrome:
         return html, None
     sortie_pdf = os.path.join(dossier, 'rapport.pdf')
+    # jamais d'ancien PDF présenté comme neuf si Chrome échoue
+    try:
+        os.unlink(sortie_pdf)
+    except OSError:
+        pass
     import tempfile
     with tempfile.TemporaryDirectory(prefix='shadow-rapport-') as profil:
         # profil jetable : ne touche jamais au Chrome de l'utilisateur
         r = subprocess.run([chrome, '--headless=new', '--disable-gpu', '--no-pdf-header-footer',
-                            f'--user-data-dir={profil}', '--no-first-run', '--allow-file-access-from-files',
+                            f'--user-data-dir={profil}', '--no-first-run',
                             f'--print-to-pdf={sortie_pdf}', 'file://' + html],
                            capture_output=True, text=True, timeout=120)
     return html, (sortie_pdf if r.returncode == 0 and os.path.exists(sortie_pdf) else None)
@@ -414,6 +422,78 @@ def exporter(md, pdf=True):
 
 def html_echappe(t):
     return t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+
+# Le rapport contient des textes venus de la cible (bannières nmap, sorties de commandes) :
+# seul un HTML sûr, produit par le Markdown, est gardé. Tout autre balise est affichée comme texte.
+_BALISES = {'h1', 'h2', 'h3', 'h4', 'p', 'em', 'strong', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th',
+            'td', 'ul', 'ol', 'li', 'a', 'img', 'br', 'hr', 'blockquote'}
+_ATTRS = {'a': {'id', 'href'}, 'img': {'src', 'alt'}, 'table': {'class'}, 'td': {'align'}, 'th': {'align'},
+          'code': {'class'}}
+
+
+def assainir(html):
+    from html.parser import HTMLParser
+
+    class Filtre(HTMLParser):
+        def __init__(self):
+            super().__init__(convert_charrefs=False)
+            self.o = []
+
+        def _attrs(self, tag, attrs):
+            garde = []
+            for k, v in attrs:
+                v = v or ''
+                if k not in _ATTRS.get(tag, set()):
+                    continue
+                if k in ('href', 'src'):
+                    bas = v.strip().lower()
+                    # ni script ni ressource distante : liens internes (#…) et fichiers de la mission
+                    if bas.startswith(('javascript:', 'data:', 'vbscript:', '//')) or '://' in bas:
+                        if not (k == 'href' and bas.startswith(('http://', 'https://'))):
+                            continue
+                    if k == 'src' and ('://' in bas or bas.startswith(('/', '//')) or '..' in bas):
+                        continue
+                garde.append(f' {k}="{html_echappe(v).replace(chr(34), "&quot;")}"')
+            return ''.join(garde)
+
+        def handle_starttag(self, tag, attrs):
+            if tag in _BALISES:
+                self.o.append(f'<{tag}{self._attrs(tag, attrs)}>')
+            else:
+                self.o.append(html_echappe(self.get_starttag_text() or ''))
+
+        def handle_startendtag(self, tag, attrs):
+            if tag in _BALISES:
+                self.o.append(f'<{tag}{self._attrs(tag, attrs)}>')
+            else:
+                self.o.append(html_echappe(self.get_starttag_text() or ''))
+
+        def handle_endtag(self, tag):
+            self.o.append(f'</{tag}>' if tag in _BALISES else html_echappe(f'</{tag}>'))
+
+        def handle_data(self, d):
+            self.o.append(d)
+
+        def handle_entityref(self, n):
+            self.o.append(f'&{n};')
+
+        def handle_charref(self, n):
+            self.o.append(f'&#{n};')
+
+        def handle_comment(self, d):
+            pass
+
+        def handle_decl(self, d):
+            pass
+
+        def unknown_decl(self, d):
+            pass
+
+    f = Filtre()
+    f.feed(html)
+    f.close()
+    return ''.join(f.o)
 
 
 def main(argv):

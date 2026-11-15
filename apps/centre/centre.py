@@ -637,7 +637,7 @@ class Centre(Adw.ApplicationWindow):
                 html, fichier_pdf = shadow_cible.exporter(md, pdf=pdf)
                 cible = fichier_pdf if pdf else html
                 erreur = None if cible else 'PDF impossible : Chrome ou Chromium introuvable'
-            except (OSError, SystemExit, ValueError, subprocess.SubprocessError) as err:
+            except (Exception, SystemExit) as err:     # le fil doit toujours rendre la main à l'interface
                 cible, erreur = None, f'Échec du rapport : {err}'
             GLib.idle_add(fin, cible, erreur)
 

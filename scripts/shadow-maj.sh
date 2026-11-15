@@ -52,7 +52,7 @@ while [ $# -gt 0 ]; do
     instantanes|instantanés) ;;
     retour) shift; RETOUR_ID="${1:-}"; break ;;
     --sans|--seulement) liste="$1"; [ "$1" = --seulement ] && choisies=() ;;
-    -h|--help|aide) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help|aide) sed -n '2,/^[^#]/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
     -*) printf 'shadow maj : option « %s » inconnue (shadow maj aide)\n' "$1" >&2; exit 2 ;;
     *)
       [ -n "$liste" ] || { printf 'shadow maj : « %s » inconnu (shadow maj aide)\n' "$1" >&2; exit 2; }
@@ -143,22 +143,40 @@ ecrire_attente(){                  # $1 = 1 pour prévenir par une notification 
 INST_DIR=/var/lib/shadow-os/instantanes
 script_instantane(){
   cat <<'FIN'
-inst="/var/lib/shadow-os/instantanes/$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$inst/debs" && chmod 755 /var/lib/shadow-os /var/lib/shadow-os/instantanes "$inst"
-dpkg-query -W -f='${binary:Package}\t${Version}\n' > "$inst/paquets.tsv"
-# /etc contient des secrets (mots de passe hachés, clés) : archive lisible par root seulement
-tar -czf "$inst/etc.tar.gz" -C / etc 2>/dev/null; chmod 600 "$inst/etc.tar.gz"
-command -v snap >/dev/null && snap list 2>/dev/null | awk 'NR>1{print $1"\t"$3}' > "$inst/snaps.tsv"
-LC_ALL=C apt-get -s full-upgrade 2>/dev/null | sed -n 's/^Inst \([^ ]*\) \[\([^]]*\)\].*/\1\t\2/p' > "$inst/changent.tsv"
-if [ -s "$inst/changent.tsv" ]; then
-  command -v dpkg-repack >/dev/null || apt-get install -y -q dpkg-repack >/dev/null 2>&1 || true
-  ( cd "$inst/debs" && while IFS=$'\t' read -r p v; do
-      apt-get download -q "$p=$v" >/dev/null 2>&1 || dpkg-repack "$p" >/dev/null 2>&1 || echo "$p" >> ../manquants.txt
-    done < ../changent.tsv )
+# rien à mettre à jour : pas d'instantané (il chasserait un instantané utile de la rotation)
+LC_ALL=C apt-get -s full-upgrade 2>/dev/null > /tmp/shadow-maj-sim.$$
+snaps_maj="$(command -v snap >/dev/null && snap refresh --list 2>/dev/null | tail -n +2)"
+if ! grep -q '^Inst ' /tmp/shadow-maj-sim.$$ && [ -z "$snaps_maj" ]; then
+  echo "  · rien à mettre à jour : pas d'instantané"
+else
+  base=/var/lib/shadow-os/instantanes
+  install -d -m 755 /var/lib/shadow-os "$base"
+  # place d'abord : on garde les 2 derniers, le nouveau fera le 3e
+  ls -1d "$base"/2* 2>/dev/null | head -n -2 | xargs -r rm -rf
+  libre_ko="$(df --output=avail -k "$base" | tail -1 | tr -d ' ')"
+  if [ "${libre_ko:-0}" -lt 3145728 ]; then
+    echo "  ✘ moins de 3 Go libres : pas d'instantané cette fois (la mise à jour continue)"
+  else
+    inst="$base/$(date +%Y%m%d-%H%M%S)"
+    install -d -m 755 "$inst" "$inst/debs"
+    dpkg-query -W -f='${binary:Package}\t${Architecture}\t${Version}\n' > "$inst/paquets.tsv"
+    # /etc contient des secrets (mots de passe hachés, clés) : créé d'emblée en accès root seul
+    ( umask 077; tar -czf "$inst/etc.tar.gz" -C / etc 2>/dev/null )
+    command -v snap >/dev/null && snap list 2>/dev/null | awk 'NR>1{print $1"\t"$3}' > "$inst/snaps.tsv"
+    # paquets mis à jour (avec leur version actuelle), nouveaux et retirés
+    sed -n 's/^Inst \([^ ]*\) \[\([^]]*\)\].*/\1\t\2/p' /tmp/shadow-maj-sim.$$ > "$inst/changent.tsv"
+    sed -n 's/^Inst \([^ ]*\) (\([^ ]*\) .*/\1\t\2/p' /tmp/shadow-maj-sim.$$ > "$inst/nouveaux.tsv"
+    sed -n 's/^Remv \([^ ]*\) \[\([^]]*\)\].*/\1\t\2/p' /tmp/shadow-maj-sim.$$ > "$inst/retires.tsv"
+    if [ -s "$inst/changent.tsv" ]; then
+      command -v dpkg-repack >/dev/null || apt-get install -y -q dpkg-repack >/dev/null 2>&1 || true
+      ( cd "$inst/debs" && while IFS=$'\t' read -r p v; do
+          apt-get download -q "$p=$v" >/dev/null 2>&1 || dpkg-repack "$p" >/dev/null 2>&1 || echo "$p" >> ../manquants.txt
+        done < ../changent.tsv )
+    fi
+    echo "  · instantané $(basename "$inst") : $(wc -l < "$inst/changent.tsv") paquet(s) gardé(s) dans leur version actuelle$( [ -s "$inst/manquants.txt" ] && echo ", $(wc -l < "$inst/manquants.txt") introuvable(s)")"
+  fi
 fi
-echo "  · instantané $(basename "$inst") : $(wc -l < "$inst/changent.tsv") paquet(s) gardé(s) dans leur version actuelle$( [ -s "$inst/manquants.txt" ] && echo ", $(wc -l < "$inst/manquants.txt") introuvable(s)")"
-# on garde les 3 derniers
-ls -1d /var/lib/shadow-os/instantanes/2* 2>/dev/null | head -n -3 | xargs -r rm -rf
+rm -f /tmp/shadow-maj-sim.$$
 FIN
 }
 
@@ -176,19 +194,30 @@ if [ "$mode" = instantanes ]; then
 fi
 
 if [ "$mode" = retour ]; then
-  id="${RETOUR_ID:-$(ls -1d "$INST_DIR"/2* 2>/dev/null | sort | tail -1 | xargs -r basename)}"
+  dernier="$(ls -1d "$INST_DIR"/2* 2>/dev/null | sort | tail -1 | xargs -r basename)"
+  id="${RETOUR_ID:-$dernier}"
   [[ "$id" =~ ^[0-9]{8}-[0-9]{6}$ ]] && [ -d "$INST_DIR/$id" ] || { printf 'shadow maj retour : instantané « %s » introuvable (shadow maj instantanes)\n' "$id" >&2; exit 2; }
+  if [ "$id" != "$dernier" ]; then
+    # revenir à un instantané plus ancien laisserait en place les mises à jour faites depuis
+    printf 'shadow maj retour : seul le dernier instantané (%s) peut être rejoué ; reviens d'\''abord à celui-là\n' "$dernier" >&2
+    exit 2
+  fi
   titre "Retour à l'instantané $id (un seul mot de passe)"
   retour="$(printf 'inst=%q\n' "$INST_DIR/$id"; cat <<'FIN'
 export DEBIAN_FRONTEND=noninteractive
 cd "$inst" || exit 2
+native="$(dpkg --print-architecture)"
 declare -A deb
-for f in debs/*.deb; do [ -e "$f" ] || continue; deb["$(dpkg-deb -f "$f" Package):$(dpkg-deb -f "$f" Version)"]="$f"; done
+for f in debs/*.deb; do
+  [ -e "$f" ] || continue
+  deb["$(dpkg-deb -f "$f" Package):$(dpkg-deb -f "$f" Architecture):$(dpkg-deb -f "$f" Version)"]="$f"
+done
 a_remettre=()
 while IFS=$'\t' read -r p v; do
   cur="$(dpkg-query -W -f='${Version}' "$p" 2>/dev/null)"
   [ "$cur" = "$v" ] && continue
-  f="${deb[${p%%:*}:$v]:-}"
+  nom="${p%%:*}"; arch="${p#*:}"; [ "$arch" = "$p" ] && arch="$native"
+  f="${deb[$nom:$arch:$v]:-${deb[$nom:all:$v]:-}}"
   [ -n "$f" ] && a_remettre+=("./$f") || echo "  ✘ $p $v : pas de paquet gardé"
 done < changent.tsv
 if [ ${#a_remettre[@]} -gt 0 ]; then
@@ -203,6 +232,8 @@ if [ -s snaps.tsv ] && command -v snap >/dev/null; then
     [ -n "$cur" ] && [ "$cur" != "$rev" ] && { echo "  · snap $n : révision $cur → $rev"; snap revert "$n" --revision "$rev" >/dev/null || echo "  ✘ snap $n : retour impossible"; }
   done < snaps.tsv
 fi
+[ -s nouveaux.tsv ] && echo "  · ajoutés par la mise à jour (laissés en place) : $(cut -f1 nouveaux.tsv | tr '\n' ' ')"
+[ -s retires.tsv ] && echo "  · retirés par la mise à jour (à réinstaller avec apt si besoin) : $(cut -f1 retires.tsv | tr '\n' ' ')"
 echo "  · /etc d'avant (non restauré automatiquement) : $inst/etc.tar.gz"
 FIN
 )"
