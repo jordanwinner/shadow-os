@@ -146,7 +146,7 @@ def v_extensions():
             return all(lancer('gnome-extensions', 'enable', u)[0] == 0 for u in us)
         out.append(constat('extensions-eteintes', 'Extensions', AVERT,
                            'éteintes alors qu\'elles font partie de Shadow : ' + ', '.join(e.split('@')[0] for e in eteintes),
-                           'les rallumer', True, rallumer))
+                           'les rallumer (si c\'est voulu : shadow docteur photo)', True, rallumer))
     if shell is not None and not coupees:
         for u in ref:
             info = shell.get(u)
