@@ -163,24 +163,70 @@ build(){
 .ws-switcher-indicator:active, .workspace-switcher .ws-switcher-active-up, .workspace-switcher .ws-switcher-active-down {
   background-color: #7C6CFF; }
 
-/* Écran de verrouillage : grande heure façon iOS / macOS */
-.unlock-dialog-clock { color: #ECEBFA; }
+/* Écran de verrouillage Shadow : le croissant Éclipse, l'heure fine en très grand (façon iOS) */
+.unlock-dialog-clock {
+  color: #ECEBFA;
+  spacing: 4px; }
 .unlock-dialog-clock .unlock-dialog-clock-time {
   font-family: "Inter Display", "Inter", sans-serif;
-  font-size: 7.4em;
-  font-weight: 600 !important; }
+  font-size: 8.6em;
+  font-weight: 300 !important;
+  letter-spacing: -2px;
+  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.40); }
 .unlock-dialog-clock .unlock-dialog-clock-date {
   font-family: "Inter", sans-serif;
-  font-size: 1.35em;
-  font-weight: 500 !important;
-  color: #D9D2FF; }
+  font-size: 1.2em;
+  font-weight: 600 !important;
+  color: #D9D2FF;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
 .unlock-dialog-clock .unlock-dialog-clock-hint {
+  margin-top: 28px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background-color: rgba(14, 14, 22, 0.50);
+  border: 1px solid rgba(183, 169, 255, 0.18);
+  color: #C9C6E2;
+  font-weight: 500; }
+/* invite : avatar cerclé d'Éclipse, champ en verre */
+.unlock-dialog .user-widget .user-icon {
+  border: 3px solid rgba(124, 108, 255, 0.85);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }
+.unlock-dialog .user-widget .user-widget-label {
+  font-size: 1.55em; font-weight: 600 !important; color: #ECEBFA; }
+.unlock-dialog .login-dialog-prompt-entry {
+  border-radius: 999px;
+  min-width: 300px;
+  padding: 10px 18px;
   background-color: rgba(14, 14, 22, 0.55);
+  border: 1px solid rgba(183, 169, 255, 0.22);
+  color: #ECEBFA; }
+.unlock-dialog .login-dialog-prompt-entry:hover { background-color: rgba(26, 26, 48, 0.62); }
+.unlock-dialog .login-dialog-prompt-entry:focus {
+  border-color: #7C6CFF;
+  box-shadow: 0 0 0 3px rgba(124, 108, 255, 0.28); }
+/* notifications et bouton « changer d'utilisateur » : même verre */
+.unlock-dialog-notifications-container .notification,
+.unlock-dialog-notifications-container .unlock-dialog-notification-source {
+  background-color: rgba(14, 14, 22, 0.58);
   border: 1px solid rgba(183, 169, 255, 0.14);
-  color: #A9A9C2; }
-.unlock-dialog .login-dialog-prompt-entry { border-radius: 999px; }
-.unlock-dialog .login-dialog-prompt-entry:focus { border-color: #7C6CFF; }
+  border-radius: 18px; }
+.unlock-dialog .switch-user-button {
+  background-color: rgba(14, 14, 22, 0.55);
+  border: 1px solid rgba(183, 169, 255, 0.18); }
+.unlock-dialog .switch-user-button:hover { background-color: rgba(124, 108, 255, 0.30); }
 CSS
+  mkdir -p "$THEME_DIR/gnome-shell/assets"
+  cat > "$THEME_DIR/gnome-shell/assets/croissant.svg" <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D9D2FF"/><stop offset="0.55" stop-color="#7C6CFF"/><stop offset="1" stop-color="#FF4D8D"/>
+    </linearGradient>
+    <mask id="m"><rect width="64" height="64" fill="#fff"/><circle cx="40" cy="26" r="24" fill="#000"/></mask>
+  </defs>
+  <circle cx="30" cy="34" r="26" fill="url(#g)" mask="url(#m)"/>
+</svg>
+SVG
   cat > "$THEME_DIR/index.theme" <<EOF
 [Desktop Entry]
 Type=X-GNOME-Metatheme
