@@ -57,10 +57,12 @@ Requires=org.gnome.Shell@shadow.service
 EOF
 
 # 3. mêmes données de bureau que la session Ubuntu (applications par défaut…)
-[ -e "$DONNEES" ] || ln -s /usr/share/ubuntu "$DONNEES"
+# (lien recréé s'il est cassé ; un vrai dossier existant n'est pas touché)
+[ -d "$DONNEES" ] && [ ! -L "$DONNEES" ] || ln -sfn /usr/share/ubuntu "$DONNEES"
 
 # 4. les réglages par défaut qu'Ubuntu réserve à son bureau valent aussi pour Shadow
 #    (sections « [schéma:ubuntu] » recopiées en « [schéma:Shadow] »)
+shopt -s nullglob
 {
   echo "# Shadow OS — réglages par défaut d'Ubuntu, appliqués au bureau « Shadow » (généré)"
   for f in /usr/share/glib-2.0/schemas/*ubuntu*.gschema.override; do
@@ -68,10 +70,14 @@ EOF
   done
 } > "$SCHEMA"
 chmod 644 "$SCHEMA"
-glib-compile-schemas --strict /usr/share/glib-2.0/schemas >/dev/null 2>&1 || {
+# compilation normale : --strict échouerait au moindre avertissement d'un AUTRE paquet
+glib-compile-schemas /usr/share/glib-2.0/schemas >/dev/null 2>&1 || {
   # un schéma refusé ne doit jamais casser les réglages du système
   rm -f "$SCHEMA"; glib-compile-schemas /usr/share/glib-2.0/schemas
   echo "  ⚠ réglages par défaut d'Ubuntu non recopiés (schéma refusé)"
 }
 systemctl --global daemon-reload 2>/dev/null || true
 echo "  ✓ session « Shadow » installée : choisis-la à l'écran de connexion (roue en bas à droite)"
+# Filet de sécurité : dans cette session, GNOME ne peut plus couper ces extensions après un
+# plantage (elles font partie du mode). Si une mise à jour en casse une, choisir « Ubuntu »
+# à l'écran de connexion, puis « shadow docteur ».

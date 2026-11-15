@@ -215,18 +215,6 @@ build(){
   border: 1px solid rgba(183, 169, 255, 0.18); }
 .unlock-dialog .switch-user-button:hover { background-color: rgba(124, 108, 255, 0.30); }
 CSS
-  mkdir -p "$THEME_DIR/gnome-shell/assets"
-  cat > "$THEME_DIR/gnome-shell/assets/croissant.svg" <<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#D9D2FF"/><stop offset="0.55" stop-color="#7C6CFF"/><stop offset="1" stop-color="#FF4D8D"/>
-    </linearGradient>
-    <mask id="m"><rect width="64" height="64" fill="#fff"/><circle cx="40" cy="26" r="24" fill="#000"/></mask>
-  </defs>
-  <circle cx="30" cy="34" r="26" fill="url(#g)" mask="url(#m)"/>
-</svg>
-SVG
   cat > "$THEME_DIR/index.theme" <<EOF
 [Desktop Entry]
 Type=X-GNOME-Metatheme
