@@ -89,7 +89,8 @@ le trousseau personnel). Pour publier sur une URL (GitHub Pages, serveur) : copi
 | `shadow maj verifier` | montre ce qui attend une mise à jour, sans rien changer |
 | `shadow docteur` / `reparer` | vérifie extensions, barre, thème, commandes, shsh, système, mission, arsenal ; répare ce qui peut l'être. Passe seul toutes les 15 min (`shadow docteur minuteur on`) : répare sans risque, prévient dans l'îlot pour le reste |
 | `shadow cible ADRESSE NOM` / `fin` | mission : îlot, `$CIBLE` dans les terminaux, dossier `~/ctf/NOM` ; shsh y tient `journal.md` |
-| `shadow rapport [NOM]` | rapport Markdown de la mission : chronologie (journal shsh), ports nmap de `scans/`, butin avec SHA-256, notes |
+| `shadow rapport [NOM]` | rapport Markdown de la mission : chronologie (journal shsh), preuves (`preuve COMMANDE` dans shsh), ports nmap de `scans/`, butin avec SHA-256, notes |
+| îlot : pastille « N mises à jour » | `shadow maj veille` (minuteur 6 h) compte ce qui attend ; toucher la pastille ou la tuile « Mises à jour » de l'accueil lance `shadow maj` dans un terminal |
 | `shadow mode restaurer` | remet les réglages d'avant le premier `shadow mode` |
 | `theme/eclipse.sh apply` | palette Éclipse : thème shell + GTK « Shadow », tuiles, dock |
 | `theme/eclipse.sh revert` | revient au thème d'avant (TokyoCombo / Tokyonight) |

@@ -108,7 +108,9 @@ def terminer():
             pass
 
 
-LIGNE_JOURNAL = re.compile(r'^- (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) · (✔|✘ -?\d+) · ([^·]+) · (`+) ?(.*?) ?\4 — (`+) ?(.*?) ?\6$')
+LIGNE_JOURNAL = re.compile(r'^- (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) · (✔|✘ -?\d+) · ([^·]+) · (`+) ?(.*?) ?\4 — (`+) ?(.*?) ?\6'
+                           r'(?: · preuve : \[(preuves/[^\]/]+)\]\(preuves/[^)/]+\))?$')
+PREUVE_LIGNES = 60                       # extrait de chaque preuve dans le rapport
 PORT_NMAP = re.compile(r'^(\d+)/(tcp|udp)\s+open\s+(\S+)\s*(.*)$')
 
 
@@ -158,7 +160,7 @@ def rapport(nom=None, sortie=None):
                 m = LIGNE_JOURNAL.match(ligne.rstrip('\n'))
                 if m:
                     entrees.append({'quand': m.group(1), 'code': m.group(2), 'duree': m.group(3).strip(),
-                                    'dossier': m.group(5), 'commande': m.group(7)})
+                                    'dossier': m.group(5), 'commande': m.group(7), 'preuve': m.group(8)})
     except OSError:
         pass
     echecs = sum(1 for e in entrees if e['code'] != '✔')
@@ -203,6 +205,7 @@ def rapport(nom=None, sortie=None):
          f'| Cible | `{_cellule(adresse)}` |',
          f'| Période | {debut} → {fin} |',
          f'| Commandes notées | {len(entrees)} (dont {echecs} en échec) |',
+         f'| Preuves gardées | {sum(1 for e in entrees if e["preuve"])} |',
          f'| Ports ouverts | {len(ports)} |',
          f'| Fichiers de butin | {len(butin)} |', '']
     o += ['## Ports et services', '']
@@ -215,10 +218,35 @@ def rapport(nom=None, sortie=None):
     o += ['', '## Chronologie', '']
     if entrees:
         o += ['| Heure | Résultat | Durée | Commande |', '|---|---|---|---|']
-        for e in entrees:
-            o.append(f'| {e["quand"]} | {e["code"]} | {e["duree"]} | {_code(e["commande"])} |')
+        for i, e in enumerate(entrees):
+            lien = f' · [preuve](#preuve-{i})' if e['preuve'] else ''
+            o.append(f'| {e["quand"]} | {e["code"]} | {e["duree"]} | {_code(e["commande"])}{lien} |')
     else:
         o.append('Aucune commande notée : le journal est tenu par shsh pendant une mission (`journal mission`).')
+    # Preuves : sortie gardée par « preuve COMMANDE » dans shsh, extrait sous chaque commande
+    preuves = [(i, e) for i, e in enumerate(entrees) if e['preuve']]
+    if preuves:
+        o += ['', '## Preuves', '']
+        for i, e in preuves:
+            chemin = os.path.join(dossier, e['preuve'])
+            try:
+                with open(chemin, errors='replace') as f:
+                    texte = f.read()
+            except OSError:
+                texte = None
+            titre = re.sub(r'^preuve\s+', '', e['commande'])
+            o += [f'<a id="preuve-{i}"></a>', f'### {_code(titre)}', '',
+                  f'{e["quand"]} · {e["code"]} · {e["duree"]} · fichier complet : [{e["preuve"]}]({e["preuve"]})', '']
+            if texte is None:
+                o += ['*Fichier de preuve introuvable.*', '']
+                continue
+            corps = texte.split('\n---\n', 1)[-1].strip('\n').split('\n')
+            extrait = corps[:PREUVE_LIGNES]
+            barrieres = max([len(x) for x in re.findall(r'`{3,}', '\n'.join(extrait))] + [2]) + 1
+            o += ['`' * barrieres + 'text', *extrait, '`' * barrieres]
+            if len(corps) > PREUVE_LIGNES:
+                o.append(f'*… {len(corps) - PREUVE_LIGNES} ligne(s) de plus dans le fichier.*')
+            o.append('')
     o += ['', '## Butin', '']
     if butin:
         o += ['| Fichier | Taille | SHA-256 |', '|---|---|---|']
