@@ -47,12 +47,12 @@ DataDirectory /var/lib/shadow-furtif-tor
 RunAsDaemon 0
 SocksPort 127.0.0.1:9150
 TransPort 127.0.0.1:9040
-# les .onion peuvent revenir en adresse IPv6 virtuelle : Tor doit aussi écouter là
-TransPort [::1]:9040
 DNSPort 127.0.0.1:5353
 AutomapHostsOnResolve 1
 # adresses des .onion : hors du réseau local (10/8) pour être redirigées vers Tor
 VirtualAddrNetworkIPv4 100.64.0.0/10
+# par défaut fe80::/10 (lien-local) : inutilisable sans interface, les .onion échoueraient
+VirtualAddrNetworkIPv6 [FC00::]/7
 ClientUseIPv6 0
 Log notice syslog
 """
@@ -97,7 +97,7 @@ ipv6.ip6-privacy=2
 # codes de sortie du script root
 ERREURS = {3: 'la connexion n\'a pas pu se rétablir avec l\'identité masquée (réglages remis)',
            4: 'Tor n\'a pas pu démarrer (tout a été annulé)',
-           5: 'Tor n\'est pas prêt après 90 s, réseau bloqué ? (tout a été annulé)',
+           5: 'Tor n\'est pas prêt après 3 min, réseau bloqué ? (tout a été annulé)',
            6: 'les règles nftables ont été refusées (tout a été annulé)',
            7: 'la sortie par Tor n\'a pas pu être vérifiée (tout a été annulé)',
            126: 'mot de passe refusé : rien n\'a changé', 127: 'mot de passe refusé : rien n\'a changé'}
@@ -203,13 +203,19 @@ install -d -m 700 -o debian-tor -g debian-tor /var/lib/shadow-furtif-tor
 install -d -m 755 /etc/shadow-os /run/shadow-furtif
 cat > /etc/shadow-os/furtif-torrc <<'FIN'
 {TORRC}FIN
+# les .onion peuvent revenir en adresse IPv6 virtuelle : Tor écoute aussi sur ::1, s'il existe
+# (un port impossible à ouvrir empêcherait Tor de démarrer : IPv6 désactivé, conteneur…)
+if ip -6 addr show dev lo 2>/dev/null | grep -q 'inet6 ::1'; then
+  echo 'TransPort [::1]:9040' >> /etc/shadow-os/furtif-torrc
+fi
 systemctl stop shadow-furtif-tor 2>/dev/null; systemctl reset-failed shadow-furtif-tor 2>/dev/null
 systemd-run --unit=shadow-furtif-tor --description="Shadow furtif : Tor" /usr/sbin/tor -f /etc/shadow-os/furtif-torrc >/dev/null \\
   || {{ annuler; exit 4; }}
-# Tor prêt AVANT de lui confier le trafic : on ne lit que le journal de CETTE instance
+# Tor prêt AVANT de lui confier le trafic (3 min au plus : premier démarrage à froid sur
+# une connexion lente ; ensuite le cache rend cela rapide). Journal de CETTE instance seulement.
 inv="$(systemctl show -p InvocationID --value shadow-furtif-tor)"
 pret=0
-for i in $(seq 1 90); do
+for i in $(seq 1 180); do
   journalctl _SYSTEMD_INVOCATION_ID="$inv" --no-pager -q 2>/dev/null | grep -q 'Bootstrapped 100%' && {{ pret=1; break; }}
   sleep 1
 done
@@ -242,6 +248,8 @@ def on(avec_tor=True):
     if mac_fixee(uuid, typ):
         print('  ⚠ ce réseau impose sa propre adresse MAC : elle ne sera pas changée')
     print('  · une fenêtre de mot de passe va s\'ouvrir ; la connexion va se couper quelques secondes')
+    if avec_tor:
+        print('  · Tor démarre : jusqu\'à 3 minutes la première fois, quelques secondes ensuite')
     # état écrit AVANT : si quoi que ce soit s'interrompt, le mode apparaît actif et « off » nettoie
     ecrire_etat({'actif': True, 'tor': avec_tor, 'interface': dev, 'uuid': uuid, 'en_cours': True,
                  'depuis': time.strftime('%Y-%m-%dT%H:%M:%S%z')})

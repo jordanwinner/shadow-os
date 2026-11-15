@@ -580,7 +580,7 @@ class Centre(Adw.ApplicationWindow):
             argv.append('--sans-tor')
         self._furtif_en_cours = True
         rangee.set_sensitive(False)
-        rangee.set_subtitle('Activation… (Tor peut mettre jusqu’à une minute)' if voulu else 'Retour au réseau normal…')
+        rangee.set_subtitle('Activation… (Tor : jusqu’à 3 min la première fois)' if voulu else 'Retour au réseau normal…')
 
         def fin(ok):
             self._furtif_en_cours = False
