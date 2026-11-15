@@ -15,7 +15,7 @@ Usage :
   shadow-cible terminaux          montre la ligne à ajouter à ~/.bashrc / ~/.zshrc
   shadow-cible terminaux installer  l'ajoute pour toi (une seule fois, ligne marquée)
   shadow-cible json               état complet, pour le Centre Shadow
-  shadow-cible rapport [NOM] [--sortie FICHIER]
+  shadow-cible rapport [NOM] [--sortie FICHIER] [--pdf]
                                   rapport Markdown de la mission (en cours ou ~/ctf/NOM) :
                                   chronologie tirée du journal de shsh, ports trouvés
                                   dans scans/, butin (avec empreintes), notes
@@ -26,6 +26,8 @@ import json
 import os
 import re
 import shlex
+import shutil
+import subprocess
 import sys
 
 MAISON = os.path.expanduser('~')
@@ -91,6 +93,10 @@ def fixer(adresse, nom=None):
     os.makedirs(ETAT_DIR, exist_ok=True)
     etat = {'cible': adresse, 'nom': nom, 'dossier': dossier,
             'depuis': datetime.datetime.now().isoformat(timespec='seconds')}
+    marque = os.path.join(dossier, '.mission')
+    if not os.path.exists(marque):
+        with open(marque, 'w') as f:
+            json.dump({'cible': adresse, 'debut': etat['depuis']}, f)
     with open(ETAT, 'w') as f:
         json.dump(etat, f, indent=1)
     with open(ENV, 'w') as f:
@@ -254,6 +260,12 @@ def rapport(nom=None, sortie=None):
             if len(corps) > PREUVE_LIGNES:
                 o.append(f'*… {len(corps) - PREUVE_LIGNES} ligne(s) de plus dans le fichier.*')
             o.append('')
+    # Captures d'écran prises pendant la mission (copiées dans captures/, jamais déplacées)
+    captures = collecter_captures(dossier, *fenetre_mission(dossier, etat if etat.get('dossier') == dossier else {}, entrees))
+    if captures:
+        o += ['', '## Captures d’écran', '']
+        for rel, quand in captures:
+            o += [f'![Capture du {quand}]({rel})', '', f'*{quand} · `{rel}`*', '']
     o += ['', '## Butin', '']
     if butin:
         o += ['| Fichier | Taille | SHA-256 |', '|---|---|---|']
@@ -275,7 +287,133 @@ def rapport(nom=None, sortie=None):
     sortie = sortie or os.path.join(dossier, 'rapport.md')
     with open(sortie, 'w') as f:
         f.write('\n'.join(o) + '\n')
+    resume = {'commandes': len(entrees), 'echecs': echecs, 'preuves': sum(len(e['preuves']) for e in entrees),
+              'ports': len(ports), 'butin': len(butin), 'captures': len(captures), 'cible': adresse, 'nom': nom}
+    with open(os.path.join(dossier, '.rapport.json'), 'w') as f:
+        json.dump(resume, f)
     return sortie, len(entrees), len(ports), len(butin)
+
+
+# ── Captures d'écran de la mission ──────────────────────────────────────────
+def _dossiers_captures():
+    images = subprocess.run(['xdg-user-dir', 'PICTURES'], capture_output=True, text=True).stdout.strip() \
+        if shutil.which('xdg-user-dir') else ''
+    images = images or os.path.join(MAISON, 'Images')
+    return [os.path.join(images, d) for d in ('Captures d’écran', "Captures d'écran", 'Screenshots')]
+
+
+def fenetre_mission(dossier, etat, entrees):
+    """(début, fin) de la mission en secondes : .mission, sinon le journal, sinon la date des notes."""
+    debut = fin = None
+    try:
+        with open(os.path.join(dossier, '.mission')) as f:
+            debut = datetime.datetime.fromisoformat(json.load(f)['debut']).timestamp()
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    if debut is None and etat.get('depuis'):
+        debut = datetime.datetime.fromisoformat(etat['depuis']).timestamp()
+    stamps = [datetime.datetime.strptime(e['quand'], '%Y-%m-%d %H:%M:%S').timestamp() for e in entrees]
+    if debut is None and stamps:
+        debut = min(stamps) - 600
+    if etat.get('dossier') == dossier:
+        fin = datetime.datetime.now().timestamp()          # mission en cours
+    elif stamps:
+        fin = max(stamps) + 1800                           # mission finie : 30 min après la dernière commande
+    return debut, fin
+
+
+def collecter_captures(dossier, debut, fin):
+    """Copie dans captures/ les captures prises entre début et fin ; renvoie [(chemin relatif, date)]."""
+    cible = os.path.join(dossier, 'captures')
+    if debut is not None and fin is not None:
+        for d in _dossiers_captures():
+            try:
+                noms = os.listdir(d)
+            except OSError:
+                continue
+            for n in noms:
+                src = os.path.join(d, n)
+                if not n.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) or os.path.islink(src):
+                    continue
+                try:
+                    t = os.path.getmtime(src)
+                except OSError:
+                    continue
+                if debut <= t <= fin and not os.path.exists(os.path.join(cible, n)):
+                    os.makedirs(cible, exist_ok=True)
+                    shutil.copy2(src, os.path.join(cible, n))
+    out = []
+    try:
+        for n in sorted(os.listdir(cible), key=lambda n: os.path.getmtime(os.path.join(cible, n))):
+            ch = os.path.join(cible, n)
+            if n.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) and os.path.isfile(ch) and not os.path.islink(ch):
+                out.append((f'captures/{n}', datetime.datetime.fromtimestamp(os.path.getmtime(ch)).strftime('%Y-%m-%d %H:%M')))
+    except OSError:
+        pass
+    return out
+
+
+# ── Export HTML et PDF ──────────────────────────────────────────────────────
+STYLE = """
+@page { size: A4; margin: 18mm 16mm; }
+:root { --encre:#16152A; --doux:#5D5A7E; --eclipse:#5A48E8; --braise:#D6246A; --trait:#DDD9F2; --fond:#F6F5FC; }
+* { box-sizing: border-box; }
+body { font-family: "Inter", "Segoe UI", system-ui, sans-serif; color: var(--encre); font-size: 10.5pt; line-height: 1.5; margin: 0; }
+h1 { font-size: 22pt; margin: 0 0 4pt; letter-spacing: -0.02em; }
+h1::before { content: "◐ "; color: var(--eclipse); }
+h2 { font-size: 14pt; margin: 22pt 0 8pt; padding-bottom: 4pt; border-bottom: 2px solid var(--eclipse); break-after: avoid; }
+h3 { font-size: 11.5pt; margin: 14pt 0 6pt; break-after: avoid; }
+p { margin: 4pt 0; }
+em { color: var(--doux); }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0; font-size: 9pt; break-inside: auto; }
+th, td { border: 1px solid var(--trait); padding: 4pt 6pt; text-align: left; vertical-align: top; }
+th { background: var(--fond); }
+tr { break-inside: avoid; }
+code { font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; font-size: 8.6pt; background: var(--fond); padding: 0 3pt; border-radius: 3pt; overflow-wrap: anywhere; }
+pre { background: #0E0E16; color: #E9E7F7; padding: 8pt 10pt; border-radius: 6pt; font-size: 8.4pt; white-space: pre-wrap; overflow-wrap: anywhere; }
+table.resume td:first-child { color: var(--doux); width: 32%; }
+pre code { background: none; color: inherit; padding: 0; }
+img { max-width: 100%; border: 1px solid var(--trait); border-radius: 4pt; break-inside: avoid; }
+a { color: var(--eclipse); text-decoration: none; }
+.pied { margin-top: 24pt; font-size: 8pt; color: var(--doux); border-top: 1px solid var(--trait); padding-top: 6pt; }
+"""
+
+
+def exporter(md, pdf=True):
+    """rapport.md → rapport.html (+ rapport.pdf via Chrome headless). Renvoie (html, pdf ou None)."""
+    import markdown
+    dossier = os.path.dirname(os.path.abspath(md))
+    with open(md) as f:
+        texte = f.read()
+    corps = markdown.markdown(texte, extensions=['tables', 'fenced_code'], output_format='html')
+    # tableau de résumé (en-tête vide en Markdown) : pas de ligne d'en-tête vide dans le PDF
+    corps = re.sub(r'<table>\s*<thead>\s*<tr>\s*(?:<th>\s*</th>\s*)+</tr>\s*</thead>', '<table class="resume">', corps, count=1)
+    titre = re.search(r'^# (.+)$', texte, re.M)
+    titre = html_echappe(titre.group(1)) if titre else 'Rapport de mission'
+    page = (f'<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>{titre}</title>'
+            f'<style>{STYLE}</style></head><body>{corps}'
+            f'<p class="pied">Rapport généré par Shadow OS · usage restreint au périmètre de la mission</p></body></html>')
+    html = os.path.join(dossier, 'rapport.html')
+    with open(html, 'w') as f:
+        f.write(page)
+    if not pdf:
+        return html, None
+    chrome = shutil.which('google-chrome') or shutil.which('chromium') or shutil.which('chromium-browser')
+    if not chrome:
+        return html, None
+    sortie_pdf = os.path.join(dossier, 'rapport.pdf')
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix='shadow-rapport-') as profil:
+        # profil jetable : ne touche jamais au Chrome de l'utilisateur
+        r = subprocess.run([chrome, '--headless=new', '--disable-gpu', '--no-pdf-header-footer',
+                            f'--user-data-dir={profil}', '--no-first-run', '--allow-file-access-from-files',
+                            f'--print-to-pdf={sortie_pdf}', 'file://' + html],
+                           capture_output=True, text=True, timeout=120)
+    return html, (sortie_pdf if r.returncode == 0 and os.path.exists(sortie_pdf) else None)
+
+
+def html_echappe(t):
+    return t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
 def main(argv):
@@ -296,15 +434,21 @@ def main(argv):
                   f'  {LIGNE}\n\n'
                   + ('Déjà en place dans : ' + ', '.join('~/' + f for f in faits) if faits else 'Pas encore en place.'))
     elif cmd == 'rapport':
-        reste, nom, sortie = argv[2:], None, None
+        reste, nom, sortie, pdf = argv[2:], None, None, False
         while reste:
             a = reste.pop(0)
             if a in ('--sortie', '-o') and reste:
                 sortie = os.path.abspath(reste.pop(0))
+            elif a == '--pdf':
+                pdf = True
             elif not a.startswith('-'):
                 nom = a
         chemin, n, p, b = rapport(nom, sortie)
         print(f'Rapport : {chemin}\n  {n} commande(s), {p} port(s) ouvert(s), {b} fichier(s) de butin')
+        if pdf:
+            html, fichier_pdf = exporter(chemin)
+            print(f'  HTML : {html}')
+            print(f'  PDF  : {fichier_pdf}' if fichier_pdf else '  PDF : échec (Chrome ou Chromium introuvable ?)')
     elif cmd in ('fin', 'stop', 'off'):
         avant = lire()
         terminer()

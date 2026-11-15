@@ -6,6 +6,7 @@ et Énergie sont les panneaux des applis du même nom, intégrés tels quels.
 
 Usage : centre.py [--page accueil|modes|energie|apparence|arsenal|systeme]
 """
+import json
 import os
 import shutil
 import subprocess
@@ -157,7 +158,33 @@ def etat_systeme():
     e['tactile_dispo'] = os.access(TACTILE, os.X_OK)
     e['tactile'] = not os.path.exists(TACTILE_DRAPEAU)
     e['furtif'] = shadow_furtif.etat_json()
+    e['mission_rapport'] = mission_pour_rapport(e['cible'])
     return e
+
+
+def mission_pour_rapport(cible):
+    """(nom, dossier, résumé du dernier rapport) : la mission en cours, sinon la plus récente de ~/ctf."""
+    if cible.get('nom') and cible.get('dossier') and os.path.isdir(cible['dossier']):
+        nom, dossier = cible['nom'], cible['dossier']
+    else:
+        racine = os.path.join(MAISON, 'ctf')
+        try:
+            dossiers = [os.path.join(racine, d) for d in os.listdir(racine)
+                        if os.path.isdir(os.path.join(racine, d)) and not d.startswith('.')]
+        except OSError:
+            return None
+        if not dossiers:
+            return None
+        dossier = max(dossiers, key=os.path.getmtime)
+        nom = os.path.basename(dossier)
+    resume = None
+    try:
+        with open(os.path.join(dossier, '.rapport.json')) as f:
+            resume = json.load(f)
+    except (OSError, ValueError):
+        pass
+    return {'nom': nom, 'dossier': dossier, 'resume': resume,
+            'pdf': os.path.exists(os.path.join(dossier, 'rapport.pdf'))}
 
 
 def infos_machine():
@@ -324,6 +351,20 @@ class Centre(Adw.ApplicationWindow):
             self.b_terminal.set_sensitive(e['box_existe'])
             self.r_tactile.set_sensitive(e['tactile_dispo'])
             self.r_tactile.set_active(e['tactile'])
+            m = e.get('mission_rapport')
+            occupe = getattr(self, '_rapport_en_cours', False)
+            self.b_apercu.set_sensitive(bool(m) and not occupe)
+            self.b_pdf.set_sensitive(bool(m) and not occupe)
+            if not m:
+                self.r_rapport.set_title('Rapport de mission')
+                self.r_rapport.set_subtitle('Aucune mission dans ~/ctf')
+            else:
+                self.r_rapport.set_title(f'Rapport · {m["nom"]}' + ('' if cible else ' (dernière mission)'))
+                r = m['resume']
+                self.r_rapport.set_subtitle(
+                    'Pas encore généré : journal, preuves, ports, butin et captures d’écran' if not r else
+                    f'{r["commandes"]} commandes · {r["preuves"]} preuves · {r["ports"]} ports · '
+                    f'{r["butin"]} butin · {r["captures"]} captures')
             f = e['furtif']
             self.r_furtif.set_active(f['actif'])
             self.r_furtif.set_sensitive(not getattr(self, '_furtif_en_cours', False))
@@ -526,6 +567,16 @@ class Centre(Adw.ApplicationWindow):
         groupe.add(self.s_nom)
         self.r_terminaux = Adw.ActionRow(title='Variables $CIBLE, $TARGET et $MISSION dans les terminaux')
         groupe.add(self.r_terminaux)
+        # rapport : journal, preuves, ports, butin, captures d'écran de la mission, en HTML et PDF
+        self.r_rapport = Adw.ActionRow(title='Rapport de mission')
+        self.b_apercu = Gtk.Button(label='Aperçu', valign=Gtk.Align.CENTER)
+        self.b_apercu.connect('clicked', lambda *_a: self._sur_rapport(pdf=False))
+        self.b_pdf = Gtk.Button(label='PDF', valign=Gtk.Align.CENTER)
+        self.b_pdf.add_css_class('suggested-action')
+        self.b_pdf.connect('clicked', lambda *_a: self._sur_rapport(pdf=True))
+        self.r_rapport.add_suffix(self.b_apercu)
+        self.r_rapport.add_suffix(self.b_pdf)
+        groupe.add(self.r_rapport)
         page.add(groupe)
 
         groupe = Adw.PreferencesGroup(title='Mode furtif',
@@ -570,6 +621,36 @@ class Centre(Adw.ApplicationWindow):
         shadow_cible.terminer()
         self.toast('Mission terminée, dossier conservé')
         self.rafraichir()
+
+    def _sur_rapport(self, pdf):
+        m = (self.e or {}).get('mission_rapport')
+        if not m or getattr(self, '_rapport_en_cours', False):
+            return
+        self._rapport_en_cours = True
+        self.b_apercu.set_sensitive(False)
+        self.b_pdf.set_sensitive(False)
+        self.r_rapport.set_subtitle('Génération du rapport…')
+
+        def travail():
+            try:
+                md, *_ = shadow_cible.rapport(m['nom'])
+                html, fichier_pdf = shadow_cible.exporter(md, pdf=pdf)
+                cible = fichier_pdf if pdf else html
+                erreur = None if cible else 'PDF impossible : Chrome ou Chromium introuvable'
+            except (OSError, SystemExit, ValueError, subprocess.SubprocessError) as err:
+                cible, erreur = None, f'Échec du rapport : {err}'
+            GLib.idle_add(fin, cible, erreur)
+
+        def fin(cible, erreur):
+            self._rapport_en_cours = False
+            if cible:
+                lancer(['xdg-open', cible])
+                self.toast('Rapport PDF prêt' if pdf else 'Aperçu du rapport ouvert')
+            else:
+                self.toast(erreur)
+            self.rafraichir()
+            return GLib.SOURCE_REMOVE
+        threading.Thread(target=travail, daemon=True).start()
 
     def _sur_furtif(self, rangee, _p):
         if self._maj:
