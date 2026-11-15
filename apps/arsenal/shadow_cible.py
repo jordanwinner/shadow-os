@@ -130,6 +130,8 @@ def rapport(nom=None, sortie=None):
     """Assemble le rapport Markdown d'une mission. Renvoie le chemin écrit."""
     etat = lire() or {}
     if nom:
+        if '/' in nom or nom in ('.', '..') or nom.startswith('.'):
+            sys.exit(f'nom de mission invalide : {nom!r} (un dossier de ~/ctf, sans « / »)')
         dossier = os.path.join(MISSIONS, nom)
         adresse = etat.get('cible') if etat.get('nom') == nom else None
     else:
@@ -182,6 +184,8 @@ def rapport(nom=None, sortie=None):
     for racine, _, fichiers in os.walk(os.path.join(dossier, 'butin')):
         for nomf in sorted(fichiers):
             chemin = os.path.join(racine, nomf)
+            if os.path.islink(chemin) or not os.path.isfile(chemin):
+                continue                                   # liens, FIFO, périphériques : ignorés
             try:
                 h = hashlib.sha256()
                 with open(chemin, 'rb') as f:
@@ -223,7 +227,15 @@ def rapport(nom=None, sortie=None):
         o.append('Rien dans `butin/`.')
     o += ['', '## Notes', '']
     corps = re.sub(r'\A# .*\n', '', notes)                 # le titre est déjà en tête du rapport
-    corps = re.sub(r'^(#+) ', lambda m: '#' + m.group(1) + ' ', corps, flags=re.M)
+    # titres décalés d'un niveau, sauf dans les blocs de code (commentaires, shebang)
+    lignes, dans_code = [], False
+    for ligne in corps.split('\n'):
+        if ligne.lstrip().startswith(('```', '~~~')):
+            dans_code = not dans_code
+        elif not dans_code and re.match(r'#+ ', ligne):
+            ligne = '#' + ligne
+        lignes.append(ligne)
+    corps = '\n'.join(lignes)
     o.append(corps.strip() or '—')
     sortie = sortie or os.path.join(dossier, 'rapport.md')
     with open(sortie, 'w') as f:

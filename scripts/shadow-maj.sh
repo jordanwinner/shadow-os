@@ -27,14 +27,23 @@ info(){ printf '  %s·%s %s\n' "$D" "$Z" "$*"; }
 avert(){ printf '  %s✘%s %s\n' "$R" "$Z" "$*"; BILAN_KO+=("$*"); }
 BILAN_OK=(); BILAN_KO=()
 
-mode=faire; choisies=("${ETAPES[@]}")
+etape_valide(){ local e; for e in "${ETAPES[@]}"; do [ "$e" = "$1" ] && return 0; done
+  printf 'shadow maj : étape « %s » inconnue (étapes : %s)\n' "$1" "${ETAPES[*]}" >&2; exit 2; }
+mode=faire; choisies=("${ETAPES[@]}"); liste=""
+for a in "$@"; do                      # « verifier » compte où qu'il soit placé
+  case "$a" in verifier|vérifier|-n|--verifier) mode=verifier ;; esac
+done
 while [ $# -gt 0 ]; do
   case "$1" in
-    verifier|vérifier|-n|--verifier) mode=verifier ;;
-    --sans) shift; while [ $# -gt 0 ] && [[ $1 != --* ]]; do choisies=("${choisies[@]/$1}"); shift; done; continue ;;
-    --seulement) shift; choisies=(); while [ $# -gt 0 ] && [[ $1 != --* ]]; do choisies+=("$1"); shift; done; continue ;;
+    verifier|vérifier|-n|--verifier) ;;
+    --sans|--seulement) liste="$1"; [ "$1" = --seulement ] && choisies=() ;;
     -h|--help|aide) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) printf 'shadow maj : « %s » inconnu (shadow maj aide)\n' "$1" >&2; exit 2 ;;
+    -*) printf 'shadow maj : option « %s » inconnue (shadow maj aide)\n' "$1" >&2; exit 2 ;;
+    *)
+      [ -n "$liste" ] || { printf 'shadow maj : « %s » inconnu (shadow maj aide)\n' "$1" >&2; exit 2; }
+      etape_valide "$1"
+      if [ "$liste" = --seulement ]; then choisies+=("$1")
+      else garde=(); for e in "${choisies[@]}"; do [ "$e" = "$1" ] || garde+=("$e"); done; choisies=("${garde[@]}"); fi ;;
   esac
   shift
 done
@@ -112,21 +121,25 @@ if veut shsh; then
   elif ! command -v cargo >/dev/null; then avert "cargo absent : shsh non recompilé"
   else
     info "compilation de shsh $SHSH_DEP…"
-    if (cd "$SHSH_REPO" && cargo build --release -q && cargo build -q && tests/compat.sh >/tmp/shsh-compat.$$ 2>&1); then
+    compat="$(mktemp)"
+    if (cd "$SHSH_REPO" && cargo build --release -q && cargo build -q && tests/compat.sh >"$compat" 2>&1); then
       SHSH_BIN="$SHSH_REPO/target/release/shsh"
-      ok "compilé, $(tail -1 /tmp/shsh-compat.$$)"
+      # empreinte prise juste après les tests : l'étape root refuse un binaire modifié entre-temps
+      SHSH_SHA="$(sha256sum "$SHSH_BIN" | cut -d' ' -f1)"
+      ok "compilé, $(tail -1 "$compat")"
     else
-      avert "shsh : compilation ou tests en échec, version actuelle gardée ($(tail -1 /tmp/shsh-compat.$$ 2>/dev/null))"
+      avert "shsh : compilation ou tests en échec, version actuelle gardée ($(tail -1 "$compat" 2>/dev/null))"
     fi
-    rm -f /tmp/shsh-compat.$$
+    rm -f "$compat"
   fi
 fi
 
 # 2. Tout ce qui demande root, en un seul pkexec
 if veut systeme || [ -n "$SHSH_BIN" ]; then
   titre "Système (un seul mot de passe)"
-  racine="$(mktemp --suffix=-shadow-maj.sh)"
-  {
+  # Le script root est passé en argument à pkexec, jamais écrit dans un fichier
+  # que le compte utilisateur pourrait modifier pendant la saisie du mot de passe.
+  racine="$(
     echo '#!/bin/bash'
     echo 'export DEBIAN_FRONTEND=noninteractive'
     echo 'r=0'
@@ -136,17 +149,16 @@ if veut systeme || [ -n "$SHSH_BIN" ]; then
       echo 'apt-get -y -q autoremove --purge || true'
       echo 'command -v snap >/dev/null && { echo "  · snap…"; snap refresh || r=1; }'
     fi
-    [ -n "$SHSH_BIN" ] && printf 'install -m 755 %q /usr/local/bin/shsh.nouveau && mv -f /usr/local/bin/shsh.nouveau /usr/local/bin/shsh && echo "  · shsh installé" || r=1\n' "$SHSH_BIN"
+    # copie root d'abord, puis contrôle de l'empreinte sur cette copie (que l'utilisateur ne peut plus toucher)
+    [ -n "$SHSH_BIN" ] && printf 'install -m 755 %q /usr/local/bin/shsh.nouveau && echo %q | sha256sum -c --status && mv -f /usr/local/bin/shsh.nouveau /usr/local/bin/shsh && echo "  · shsh installé" || { rm -f /usr/local/bin/shsh.nouveau; echo "  ✘ shsh : empreinte différente, installation refusée"; r=1; }\n' "$SHSH_BIN" "$SHSH_SHA  /usr/local/bin/shsh.nouveau"
     echo 'exit $r'
-  } > "$racine"
-  chmod 700 "$racine"
-  if pkexec bash "$racine"; then
-    veut systeme && ok "apt et snap à jour"; BILAN_OK+=("système")
+  )"
+  if pkexec /bin/bash -c "$racine"; then
+    veut systeme && ok "apt et snap à jour" && BILAN_OK+=("système")
     [ -n "$SHSH_BIN" ] && ok "shsh $(/usr/local/bin/shsh --version | awk '{print $2}') installé" && BILAN_OK+=("shsh")
   else
     avert "étape système interrompue ou en échec (mot de passe refusé ?)"
   fi
-  rm -f "$racine"
 fi
 
 # 3. Flatpak
