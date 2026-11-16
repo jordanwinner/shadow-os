@@ -329,7 +329,10 @@ class Centre(Adw.ApplicationWindow):
             self.t_arsenal.regler('Démarrée' if e['box_active'] else ('Arrêtée' if e['box_existe'] else 'Non installée'),
                                   f'Cible : {cible}' if cible else 'Box Kali')
             self.r_cible.set_title(cible or 'Aucune cible')
-            self.r_cible.set_subtitle(f'Mission {e["cible"]["nom"]} · {e["cible"]["dossier"]}' if cible
+            dossier = e['cible'].get('dossier', '')
+            if dossier == MAISON or dossier.startswith(MAISON + '/'):
+                dossier = '~' + dossier[len(MAISON):]
+            self.r_cible.set_subtitle(f'Mission {e["cible"]["nom"]} · {dossier}' if cible
                                       else 'Fixe une cible pour l’afficher dans l’îlot')
             self.b_fin.set_visible(bool(cible))
             self.b_dossier.set_visible(bool(cible))
