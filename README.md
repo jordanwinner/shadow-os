@@ -1,124 +1,97 @@
-# Shadow
+<div align="center">
 
-Système d'exploitation de Jordan : base Debian/Ubuntu, finition façon macOS,
-pilotage clavier façon Omarchy, arsenal Kali/Parrot, compatibilité Windows.
+# ◐ Shadow OS
 
-Ce dépôt devient la source de vérité de Shadow. L'outil existant
-`shadow-desktop` (`~/.local/share/shadow-desktop`, CLI `~/.local/bin/shadow`,
-depuis le 2026-10-23) y sera intégré.
+**A desktop that looks like macOS, drives like a tiling window manager, and carries a pentester's toolkit.**
 
-## Feuille de route
+Built on Ubuntu 26.04 and GNOME 50 · Éclipse identity · French interface
 
-| Phase | Contenu | État |
-|---|---|---|
-| 1. Fondations | identité, thème, flottant + tuiles avec bascule, arsenal cyber, couche Windows | quasi fini |
-| 2. Distribution | installateur ✅, paquet `.deb` ✅, dépôt APT ✅, ISO (`live-build`) | en cours |
-| 3. Composants maison | centre de contrôle, lanceur, mode pentest, installateur, boutique | — |
-| 4. Bureau maison | shell/compositeur Shadow | — |
+[Français](README.fr.md) · [License: GPL-3.0](LICENSE) · [shsh, the Shadow shell](https://github.com/jordanwinner/shsh)
 
-## Identité « Éclipse »
+![Shadow OS during a mission: the target in the Dynamic Island, in the terminal prompt and in the journal](docs/images/shadow-hero.jpg)
 
-Un disque d'ombre passe devant la lumière : il ne reste qu'un croissant.
+</div>
 
-| Rôle | Nom | Valeur |
-|---|---|---|
-| Fond | Vide | `#07070B` |
-| Surface | Encre | `#0E0E16` |
-| Surface haute | Ardoise | `#1A1A30` |
-| Accent | Éclipse | `#7C6CFF` |
-| Accent clair | Aura | `#D9D2FF` |
-| Secondaire | Braise | `#FF4D8D` |
+## Why Shadow
 
-- `identite/logo.svg` : icône (squircle)
-- `identite/fond-eclipse.svg` : fond d'écran 3200×1800
-- `scripts/rendre-svg.sh` : rendu SVG → PNG via Chrome headless
-- les PNG se régénèrent dans `identite/rendus/` (non versionnés)
+Pentest distributions hand you hundreds of tools and a desktop nobody would choose to live in. Polished desktops look great and know nothing about your engagement. Shadow is both: a desktop you want to use every day, where **the mission you are working on runs through the whole system**.
+
+Set a target once:
+
+```sh
+shadow cible 10.10.11.5 forge
+```
+
+and it shows up in the Dynamic Island, in every terminal prompt, in `$CIBLE` / `$TARGET` / `$MISSION`, in a `~/ctf/forge` workspace, in an automatic command journal, and finally in a PDF report.
+
+## Highlights
+
+| | |
+|---|---|
+| **Mission workflow** | Target shared by the island, the prompt and the environment · automatic command journal · `preuve COMMAND` keeps clean command output as evidence · `shadow rapport --pdf` builds the report (timeline, open ports from nmap, loot with SHA-256, screenshots taken during the mission). Text coming from the target is sanitised: a malicious banner cannot run code in the report. |
+| **Isolated arsenal** | Kali tools in a rootless container (distrobox + podman): 14 tool packs, exported to the app grid, never touching the host. |
+| **Stealth mode** | `shadow furtif on`: all traffic through a dedicated Tor instance with an nftables kill switch (DNS included, nothing leaves in clear), random MAC address, hostname hidden from DHCP. Tor output is verified, and everything is rolled back automatically if it cannot be confirmed. `--sans-tor` keeps CTF VPNs working. |
+| **Dynamic Island** | Media, notifications, focus timer, live activities (mission target, updates in progress), quick access to modes. |
+| **Modes** | Everyday, Pentest, Focus, Game, Night: wallpaper, accent, tiling, do-not-disturb, power profile and Kali box in one switch, with live previews. Automatic night routine. |
+| **Floating ⇄ tiling** | macOS-style floating windows or tiling, toggled with `Super+T`. |
+| **Shadow Centre** | One settings app for modes, power, appearance, arsenal, mission, report and stealth mode. |
+| **Self-maintaining** | `shadow maj` updates apt, snap, Flatpak, GNOME extensions, the Kali box and shsh with a single password, after taking a lightweight snapshot (`shadow maj retour` rolls back). Pending updates appear in the island. `shadow docteur` checks the desktop every 15 minutes and repairs what is safe to repair. |
+| **A real session** | A dedicated « Shadow » session at the login screen: Shadow's extensions are part of the GNOME Shell mode, so they cannot be switched off in bulk. |
+| **Éclipse identity** | Shell and GTK themes, lock screen, GRUB menu, boot and shutdown animation, icons, VS Code and Obsidian themes. |
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Desktop](docs/images/bureau.jpg) | ![Lock screen](docs/images/verrouillage.jpg) |
+| Desktop: pill top bar, glass dock, mode badge | Lock screen |
+| ![Shadow Centre, Modes](docs/images/centre-modes.png) | ![Shadow Centre, Arsenal](docs/images/centre-arsenal.png) |
+| Modes with live previews | Arsenal: Kali box, mission, report, stealth mode |
+| ![Dynamic Island](docs/images/ilot.png) | ![GRUB](docs/images/grub.jpg) |
+| Dynamic Island, expanded | Boot menu |
+| ![shsh](docs/images/shsh.png) | ![Mission report](docs/images/rapport.png) |
+| shsh during a mission | Generated mission report |
 
 ## Installation
 
-Pour (ré)appliquer Shadow sur une machine Ubuntu/Debian + GNOME :
+> **Status:** Shadow is a personal project under active development, used daily on one machine. An installable ISO is planned. Some components (the Dynamic Island, the `shadow` command and the arsenal scripts) currently live in a separate repository, `shadow-desktop`, which is not public yet.
 
-```bash
-./installer.sh              # modules utilisateur (extensions, thème, grille, scripts, terminal, apps)
-./installer.sh --avec-shell # + shsh, le shell de Shadow (dépôt ~/Dev/shsh : mission et mode dans le prompt)
-./installer.sh --tout       # + shell, système (GRUB/Plymouth/login), arsenal Kali, bureau shadow-desktop
-./installer.sh --simuler --tout   # montre le plan sans rien modifier
-./installer.sh --liste      # liste les modules
+On Ubuntu 26.04 with GNOME 50:
+
+```sh
+git clone https://github.com/jordanwinner/shadow-os ~/Shadow
+cd ~/Shadow
+./installer.sh --simuler --tout      # show the plan without changing anything
+./installer.sh                       # user modules: extensions, theme, grid, scripts, terminal, apps
+./installer.sh --avec-shell          # + shsh, the Shadow shell
+sudo systeme/installer-systeme.sh    # GRUB, boot animation, login screen, « Shadow » session
 ```
 
-L'installateur télécharge les extensions GNOME tierces depuis extensions.gnome.org
-selon la version du shell, lie l'extension Shadow, applique le thème et la grille,
-installe les scripts, le terminal et les apps. Idempotent : relançable sans risque.
+Then log out and pick **Shadow** at the login screen (gear icon). The Ubuntu session stays available. Everything system-wide is backed up in `/var/backups/shadow-os` and undone by `sudo systeme/desinstaller-systeme.sh`.
 
-### Paquets Debian
+Debian packages and a signed APT repository can also be built: see [the French README](README.fr.md#paquets-debian).
 
-```bash
-paquet/construire.sh            # produit paquet/sortie/shadow-os*_1.0.0_all.deb
-sudo apt install ./paquet/sortie/shadow-os_1.0.0_all.deb   # méta : bureau + dépendances
-shadow-os                       # active Shadow sur le compte (puis reconnexion)
-shadow-os --revert              # revient au bureau d'avant
-```
+## Main commands
 
-- `shadow-os-desktop` : charge utile dans `/usr/share/shadow-os` + commande `shadow-os`.
-- `shadow-os` : méta-paquet qui tire le bureau et toutes les dépendances
-  (GNOME Shell, gestionnaire d'extensions, polices, terminal ; distrobox/podman en recommandés).
-
-### Dépôt APT
-
-```bash
-depot/construire-depot.sh       # construit depot/sortie/ (pool + dists signés + clé publique)
-sudo depot/ajouter-depot.sh "file:$PWD/depot/sortie"   # ajoute le dépôt (local)
-sudo apt update && sudo apt install shadow-os
-```
-
-Le dépôt est signé par une clé GPG dédiée (trousseau local `depot/.gnupg`, jamais
-le trousseau personnel). Pour publier sur une URL (GitHub Pages, serveur) : copier
-`depot/sortie/` à la racine web, puis sur chaque machine :
-`sudo depot/ajouter-depot.sh "https://<domaine>/shadow"`. La clé publique est
-`depot/sortie/shadow-os-archive-keyring.gpg`.
-
-## Commandes
-
-| Commande | Effet |
+| Command | What it does |
 |---|---|
-| `Super+T` ou `shadow mode bascule` | flottant (macOS) ⇄ tuiles (Omarchy) |
-| `shadow arsenal setup` | crée la box Kali isolée (distrobox + podman, sans toucher à Ubuntu) |
-| `shadow arsenal install <pack>` | installe un pack d'outils Kali (web, recon, reverse, passwords…) |
-| `shadow arsenal export <appli>` | ajoute une appli Kali à la grille (dossier « Arsenal ») |
-| `shadow maj` | met tout à jour avec un seul mot de passe : apt, snap, Flatpak, extensions GNOME (styles refusionnés), arsenal Kali, shsh |
-| `shadow maj instantanes` / `retour [ID]` | avant chaque mise à jour : versions des paquets, `/etc`, révisions snap et paquets actuels gardés (3 derniers, `/var/lib/shadow-os/instantanes`) ; `retour` réinstalle les versions d'avant et ramène les snaps |
-| `shadow maj verifier` | montre ce qui attend une mise à jour, sans rien changer |
-| `shadow docteur` / `reparer` | vérifie extensions, barre, thème, commandes, shsh, système, mission, arsenal ; répare ce qui peut l'être. Passe seul toutes les 15 min (`shadow docteur minuteur on`) : répare sans risque, prévient dans l'îlot pour le reste |
-| `shadow cible ADRESSE NOM` / `fin` | mission : îlot, `$CIBLE` dans les terminaux, dossier `~/ctf/NOM` ; shsh y tient `journal.md` |
-| `shadow rapport [NOM] [--pdf]` | rapport Markdown de la mission : chronologie (journal shsh), preuves (`preuve COMMANDE` dans shsh), ports nmap de `scans/`, butin avec SHA-256, captures d'écran prises pendant la mission (copiées dans `captures/`), notes ; `--pdf` ajoute `rapport.html` et `rapport.pdf` (Chrome headless). Aussi dans le Centre : page Arsenal › Mission › Aperçu / PDF |
-| îlot : pastille « N mises à jour » | `shadow maj veille` (minuteur 6 h) compte ce qui attend ; toucher la pastille ou la tuile « Mises à jour » de l'accueil lance `shadow maj` dans un terminal |
-| `shadow mode restaurer` | remet les réglages d'avant le premier `shadow mode` |
-| `theme/eclipse.sh apply` | palette Éclipse : thème shell + GTK « Shadow », tuiles, dock |
-| `theme/eclipse.sh revert` | revient au thème d'avant (TokyoCombo / Tokyonight) |
-| `theme/eclipse.sh build` | régénère les thèmes après une mise à jour de GNOME |
-| `theme/applis.py apply` / `revert` / `check` | grille en dossiers, noms courts, doublons masqués, dock court |
-| `theme/icones.sh apply` / `revert` | thème d'icônes Shadow (Papirus-Dark, dossiers violets) |
-| `sudo systeme/installer-systeme.sh` | GRUB Éclipse, animation de démarrage, écran de connexion, nom « Shadow » |
-| `sudo systeme/desinstaller-systeme.sh` | annule la partie système (sauvegardes dans `/var/backups/shadow-os`) |
+| `shadow cible IP NAME` · `fin` | Start / end a mission |
+| `shadow rapport [--pdf]` | Mission report (Markdown, HTML, PDF) |
+| `shadow arsenal setup` · `install PACK` | Create the Kali box · install a tool pack |
+| `shadow furtif on [--sans-tor]` · `off` · `etat` | Stealth mode |
+| `shadow modes activer pentest` | Switch mode (also `Super+Shift+M`) |
+| `shadow mode bascule` | Floating ⇄ tiling (also `Super+T`) |
+| `shadow maj` · `verifier` · `retour` | Update everything · check · roll back |
+| `shadow docteur` · `reparer` | Check and repair the desktop |
 
-Applis :
-- `apps/vscode/` : thème VS Code « Shadow Éclipse » (`code --install-extension apps/vscode/shadow-eclipse-1.0.0.vsix`)
-- `apps/obsidian/shadow-eclipse.css` : extrait CSS à copier dans `<coffre>/.obsidian/snippets/`
-- `apps/bienvenue/bienvenue.py` : présentation au premier démarrage (Utilitaires › Bienvenue)
-- `ulauncher/shadow-eclipse/` : thème Ulauncher
-- Alt+Espace : recherche GNOME façon Spotlight (extension `shadow-os@jordan`)
+The full command reference is in [README.fr.md](README.fr.md#commandes).
 
-Terminal : profil GNOME Terminal « Shadow · Éclipse » + `terminal/fastfetch.jsonc`
-(ancienne config : `~/.config/backup-theme/fastfetch-config-avant-shadow.jsonc`).
-Extension `extension/shadow-os@jordan` : accent Éclipse sur les tuiles des réglages rapides.
+## Roadmap
 
-Sauvegardes : `~/.local/state/shadow-os/`, `~/.config/backup-theme/fond-avant-eclipse.txt`.
+- Installable ISO, rebranded and based on the official Ubuntu image
+- Shadow installable for any user account (system-wide extensions, default settings)
+- Public release of the Dynamic Island and `shadow` command repository
 
-## Limites connues
+## License
 
-- GNOME 50 impose l'accent système aux tuiles des réglages rapides (aucun CSS n'y peut rien) :
-  corrigé par l'extension `shadow-os@jordan`, active après reconnexion.
-- `shadow theme apply` (ancien shadow-desktop) remettrait Tokyonight : utiliser `eclipse.sh`.
-
-Nom de paquet prévu : `shadow-os-*` (le paquet Debian `shadow` existe déjà :
-c'est celui de `passwd`/`login`).
+Shadow OS is free software, released under the [GNU General Public License v3.0](LICENSE). It builds on Ubuntu and GNOME; Ubuntu is a trademark of Canonical Ltd., and Shadow is not affiliated with or endorsed by Canonical.
