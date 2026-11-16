@@ -1,3 +1,6 @@
 identite/rendus/
 desktop/**/*.pf2
 __pycache__/
+
+# captures de développement : gardées en local et dans le dépôt privé, jamais publiées
+captures/
